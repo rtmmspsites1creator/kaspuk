@@ -507,7 +507,7 @@
     <div class="card" id="suratFormCard" style="display:none;">
       <div class="card-title">✍️ Buat Surat Baru</div>
       <div class="letter-type-tabs">
-        <button class="letter-type-btn active" data-lettertype="mandat">Surat Mandat</button>
+        <button class="letter-type-btn active" data-lettertype="mandat">Surat Tugas</button>
         <button class="letter-type-btn" data-lettertype="undangan">Undangan</button>
         <button class="letter-type-btn" data-lettertype="keterangan">Keterangan</button>
       </div>
@@ -518,14 +518,19 @@
       </div>
 
       <div class="letter-fields" id="fieldsMandat">
-        <div class="field"><label>Nama Penerima Mandat</label><input type="text" id="mandatNama" placeholder="Nama lengkap"></div>
-        <div class="field"><label>Jabatan Penerima Mandat</label><input type="text" id="mandatJabatan" placeholder="Contoh: Anggota"></div>
-        <div class="field"><label>Keperluan / Tugas</label><textarea id="mandatKeperluan" rows="3" placeholder="Menghadiri rapat koordinasi..."></textarea></div>
-        <div class="field"><label>Tempat Tugas</label><input type="text" id="mandatTempat" placeholder="Contoh: Kantor DPC FSP RTMM SPSI"></div>
+        <div class="field"><label>Nama Penerima Tugas</label><input type="text" id="mandatNama" placeholder="Nama lengkap"></div>
+        <div class="field"><label>Jabatan Penerima Tugas</label><input type="text" id="mandatJabatan" placeholder="Contoh: Anggota"></div>
+        <div class="field"><label>Perihal / Keperluan</label><input type="text" id="mandatPerihal" placeholder="Contoh: Antisipasi aksi buruh kawal UMP-UMK"></div>
+        <div class="field"><label>Uraian Tugas</label><textarea id="mandatKeperluan" rows="3" placeholder="Mengikuti aksi kawal kenaikan UMP-UMK 2024..."></textarea></div>
+        <div class="field two-col">
+          <div><label>Hari</label><input type="text" id="mandatHari" placeholder="Contoh: Senin s/d Kamis"></div>
+          <div><label>Jam</label><input type="text" id="mandatJam" placeholder="Contoh: 07:00 WIB s/d selesai"></div>
+        </div>
         <div class="field two-col">
           <div><label>Tanggal Mulai</label><input type="date" id="mandatMulai"></div>
           <div><label>Tanggal Selesai</label><input type="date" id="mandatSelesai"></div>
         </div>
+        <div class="field"><label>Tempat Tugas</label><input type="text" id="mandatTempat" placeholder="Contoh: Pemda Kab. Tangerang"></div>
         <div class="field"><label>Catatan Tambahan (opsional)</label><input type="text" id="mandatCatatan"></div>
       </div>
 
@@ -854,12 +859,12 @@
     }).then(()=>{
       descInput.value = '';
       amountInput.value = '';
-      dateInput.value = todayISO();
       setType('out');
       currentMonth = monthKey;
       showToast(isKetua ? 'Tersimpan · ' + formatRupiah(amount) : 'Terkirim · menunggu ACC Ketua');
-    }).catch(()=>{
-      showToast('Gagal menyimpan, cek koneksi internet');
+    }).catch(err=>{
+      const code = err && err.code ? err.code : '';
+      showToast(code === 'PERMISSION_DENIED' ? 'Ditolak sistem: Rules Firebase belum diperbarui' : 'Gagal menyimpan, cek koneksi internet');
     }).finally(()=>{
       saveBtn.disabled = false;
     });
@@ -889,13 +894,16 @@
     if(selectedLetterType === 'mandat'){
       const nama = document.getElementById('mandatNama').value.trim();
       const jabatan = document.getElementById('mandatJabatan').value.trim();
+      const perihal = document.getElementById('mandatPerihal').value.trim();
       const keperluan = document.getElementById('mandatKeperluan').value.trim();
+      const hari = document.getElementById('mandatHari').value.trim();
+      const jam = document.getElementById('mandatJam').value.trim();
       const tempat = document.getElementById('mandatTempat').value.trim();
       const mulai = document.getElementById('mandatMulai').value;
       const selesai = document.getElementById('mandatSelesai').value;
       const catatan = document.getElementById('mandatCatatan').value.trim();
-      if(!nama || !jabatan || !keperluan || !mulai){ showToast('Lengkapi nama, jabatan, keperluan, dan tanggal mulai'); return null; }
-      return { penerimaNama: nama, penerimaJabatan: jabatan, keperluan, tempatTugas: tempat, tanggalMulai: mulai, tanggalSelesai: selesai || mulai, catatan };
+      if(!nama || !jabatan || !keperluan || !mulai){ showToast('Lengkapi nama, jabatan, uraian tugas, dan tanggal mulai'); return null; }
+      return { penerimaNama: nama, penerimaJabatan: jabatan, perihal, keperluan, hari, jam, tempatTugas: tempat, tanggalMulai: mulai, tanggalSelesai: selesai || mulai, catatan };
     }
     if(selectedLetterType === 'undangan'){
       const perihal = document.getElementById('undPerihal').value.trim();
@@ -918,7 +926,7 @@
   }
 
   function clearLetterForm(){
-    ['mandatNama','mandatJabatan','mandatKeperluan','mandatTempat','mandatMulai','mandatSelesai','mandatCatatan',
+    ['mandatNama','mandatJabatan','mandatPerihal','mandatKeperluan','mandatHari','mandatJam','mandatTempat','mandatMulai','mandatSelesai','mandatCatatan',
      'undPerihal','undTujuan','undTanggalAcara','undWaktu','undTempat','undAgenda','undCatatan',
      'ketNama','ketJabatan','ketIsi','ketBerlaku'].forEach(id=>{
       const el = document.getElementById(id);
@@ -946,8 +954,15 @@
     }).then(()=>{
       clearLetterForm();
       showToast('Surat terkirim · menunggu ACC Ketua');
-    }).catch(()=>{
-      showToast('Gagal mengirim surat, cek koneksi internet');
+    }).catch(err=>{
+      const code = err && err.code ? err.code : '';
+      if(code === 'PERMISSION_DENIED'){
+        showToast('Ditolak sistem: Rules Firebase belum diperbarui (lihat panduan)');
+      } else if(code){
+        showToast('Gagal mengirim surat: ' + code);
+      } else {
+        showToast('Gagal mengirim surat, cek koneksi internet');
+      }
     }).finally(()=>{
       suratSubmitBtn.disabled = false;
     });
@@ -955,11 +970,13 @@
 
   function approveLetter(id){
     if(currentRole !== 'ketua') return;
+    const letterType = (letters[id] && letters[id].type) || 'undangan';
+    const code = LETTER_CODES[letterType] || 'SRT';
     const year = new Date().getFullYear();
     fdb.ref('letterCounters/' + year).transaction(curr => (curr || 0) + 1).then(result=>{
       const urut = result.snapshot.val();
       const bulanRoman = ROMAN_MONTHS[new Date().getMonth()];
-      const nomor = String(urut).padStart(3,'0') + '/PUK-FSPRTMMSPSI-TES/' + bulanRoman + '/' + year;
+      const nomor = urut + '/' + code + '/PUK SP RTMM-SPSI/TES 1/' + bulanRoman + '/' + year;
       return fdb.ref('letters/' + id).update({
         status: 'approved',
         nomorSurat: nomor,
@@ -1075,7 +1092,7 @@
   const iconKeterangan = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`;
   const iconDownload = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
 
-  const LETTER_LABELS = { mandat: 'Surat Mandat', undangan: 'Undangan', keterangan: 'Surat Keterangan' };
+  const LETTER_LABELS = { mandat: 'Surat Tugas', undangan: 'Undangan', keterangan: 'Surat Keterangan' };
 
   function letterIcon(type){
     if(type === 'mandat') return iconMandat;
@@ -1345,11 +1362,32 @@
       ];
     });
 
+    // ---- Pilih ukuran font & padding tabel otomatis agar selalu muat 1 halaman ----
+    const FOOTER_RESERVE = 92; // ruang kira-kira yang dibutuhkan saldo akhir + blok tanda tangan
+    const availableForTable = pageHeight - cursorY - FOOTER_RESERVE;
+    const sizeCandidates = [
+      { fontSize: 9,   pad: 3.2 },
+      { fontSize: 8.5, pad: 2.6 },
+      { fontSize: 8,   pad: 2.2 },
+      { fontSize: 7.5, pad: 1.8 },
+      { fontSize: 7,   pad: 1.4 },
+      { fontSize: 6.5, pad: 1.1 },
+      { fontSize: 6,   pad: 0.9 },
+      { fontSize: 5.5, pad: 0.7 },
+      { fontSize: 5,   pad: 0.5 }
+    ];
+    let tableStyle = sizeCandidates[sizeCandidates.length - 1];
+    for(const cand of sizeCandidates){
+      const rowH = cand.fontSize * 0.3528 * 1.15 + cand.pad * 2;
+      const estimatedHeight = (body.length + 2) * rowH; // +2 untuk baris head & footer
+      if(estimatedHeight <= availableForTable){ tableStyle = cand; break; }
+    }
+
     doc.autoTable({
       head: [['Tanggal','Keterangan','Pemasukan','Pengeluaran','Saldo']],
       body: body,
       startY: cursorY,
-      styles: { font:'helvetica', fontSize: 8.5, cellPadding: 3 },
+      styles: { font:'helvetica', fontSize: tableStyle.fontSize, cellPadding: tableStyle.pad },
       headStyles: { fillColor: [29, 99, 180], textColor: [255,255,255], halign:'center' },
       columnStyles: {
         0: { cellWidth: 24 },
@@ -1367,13 +1405,13 @@
       footStyles: { fillColor: [238,242,247], textColor: [22,32,43], fontStyle:'bold', halign:'right' }
     });
 
-    let finalY = doc.lastAutoTable.finalY + 12;
+    let finalY = doc.lastAutoTable.finalY + 10;
     doc.setFont('helvetica','bold');
     doc.setFontSize(12);
     doc.text('Saldo Akhir Bulan Ini : ' + formatRupiah(saldo), 14, finalY);
 
     // ---- Blok pengesahan / tanda tangan ----
-    finalY += 16;
+    finalY += 14;
     const sigBlockHeight = 55;
     if(finalY + sigBlockHeight > pageHeight - 10){
       doc.addPage();
@@ -1419,33 +1457,32 @@
   });
 
   /* ---------------- Surat: generator PDF ---------------- */
+  const LETTER_CODES = { mandat: 'ST', undangan: 'UND', keterangan: 'SKET' };
+
   function drawLetterhead(doc, pageWidth){
-    let cursorY = 10;
+    const logoSize = 18;
     if(LOGO_DATA_URI){
-      try{
-        const logoSize = 18;
-        doc.addImage(LOGO_DATA_URI, 'JPEG', pageWidth/2 - logoSize/2, 8, logoSize, logoSize);
-        cursorY = 8 + logoSize + 4;
-      }catch(e){}
+      try{ doc.addImage(LOGO_DATA_URI, 'JPEG', 14, 8, logoSize, logoSize); }catch(e){}
     }
+    let y = 13;
+    doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('PIMPINAN UNIT KERJA', pageWidth/2, y, { align:'center' }); y += 5.5;
+    doc.setFontSize(10.5);
+    doc.text('SERIKAT PEKERJA ROKOK TEMBAKAU MAKANAN MINUMAN', pageWidth/2, y, { align:'center' }); y += 4.8;
+    doc.text('SERIKAT PEKERJA SELURUH INDONESIA', pageWidth/2, y, { align:'center' }); y += 4.8;
     doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.text('PUK FSP RTMM SPSI', pageWidth/2, cursorY, { align:'center' });
-    cursorY += 5.5;
-    doc.text('PT. TORABIKA EKA SEMESTA', pageWidth/2, cursorY, { align:'center' });
-    cursorY += 5;
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    doc.text('Masa Kepengurusan 2023-2026', pageWidth/2, cursorY, { align:'center' });
-    cursorY += 4;
-    doc.setDrawColor(29,99,180);
-    doc.setLineWidth(0.8);
-    doc.line(16, cursorY, pageWidth-16, cursorY);
-    cursorY += 0.8;
-    doc.setDrawColor(30,30,30);
-    doc.setLineWidth(0.2);
-    doc.line(16, cursorY, pageWidth-16, cursorY);
-    return cursorY + 8;
+    doc.text('( PUK SP RTMM - SPSI PT TORABIKA EKA SEMESTA 1 )', pageWidth/2, y, { align:'center' }); y += 4.6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('NOMOR BUKTI PENCATATAN DISNAKERTRANS NOMOR: 243/Disnakertrans/X1/2001', pageWidth/2, y, { align:'center' }); y += 3.2;
+    doc.setDrawColor(30,30,30); doc.setLineWidth(0.2);
+    doc.line(16, y, pageWidth-16, y); y += 4;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('Jln. Raya Serang KM. 12,5 Kecamatan Cikupa Kabupaten Tangerang', pageWidth/2, y, { align:'center' }); y += 3;
+    doc.setDrawColor(29,99,180); doc.setLineWidth(0.9);
+    doc.line(14, y, pageWidth-14, y); y += 0.9;
+    doc.setDrawColor(30,30,30); doc.setLineWidth(0.2);
+    doc.line(14, y, pageWidth-14, y);
+    return y + 9;
   }
 
   function fmtTgl(iso){
@@ -1454,12 +1491,60 @@
     return d.getDate() + ' ' + MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear();
   }
 
+  // Menggambar blok penutup surat: Dikeluarkan di/Pada Tanggal, nama organisasi, kolom TTD, dan Tembusan.
+  // signers: array of { role, name }, 1-2 kolom.
+  function drawLetterClosing(doc, pageWidth, marginX, y, tanggalSurat, signers){
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const estimatedHeight = 65; // perkiraan tinggi blok penutup (tanggal + nama organisasi + TTD + tembusan)
+    if(y + estimatedHeight > pageHeight - 12){
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Dikeluarkan di  : Cikupa', pageWidth-marginX, y, { align:'right' }); y += 5.5;
+    doc.text('Pada Tanggal    : ' + fmtTgl(tanggalSurat), pageWidth-marginX, y, { align:'right' }); y += 14;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('PIMPINAN UNIT KERJA', pageWidth/2, y, { align:'center' }); y += 4.6;
+    doc.setFontSize(8.5);
+    doc.text('SERIKAT PEKERJA - ROKOK, TEMBAKAU, MAKANAN DAN MINUMAN', pageWidth/2, y, { align:'center' }); y += 4.2;
+    doc.text('SERIKAT PEKERJA SELURUH INDONESIA', pageWidth/2, y, { align:'center' }); y += 4.2;
+    doc.setFont('helvetica','bold');
+    doc.text('PT TORABIKA EKA SEMESTA 1 CIKUPA', pageWidth/2, y, { align:'center' }); y += 16;
+
+    const n = signers.length;
+    const usableWidth = pageWidth - marginX*2;
+    const colWidth = usableWidth / n;
+    const centers = signers.map((s,i)=> marginX + colWidth*i + colWidth/2);
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    signers.forEach((s,i)=> doc.text(s.role + ',', centers[i], y, { align:'center' }));
+
+    const lineY = y + 24;
+    const half = Math.min(24, colWidth/2 - 6);
+    doc.setDrawColor(40,40,40); doc.setLineWidth(0.3);
+    centers.forEach(c=> doc.line(c-half, lineY, c+half, lineY));
+
+    const nameY = lineY + 6;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+    signers.forEach((s,i)=> doc.text(s.name, centers[i], nameY, { align:'center' }));
+
+    let ty = nameY + 14;
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.5);
+    doc.text('Tembusan :', marginX, ty); ty += 4.5;
+    doc.setFont('helvetica','normal');
+    doc.text('1. Kepada Yth, Pimpinan Perusahaan PT. Torabika Eka Semesta Cikupa.', marginX+4, ty); ty += 4.2;
+    doc.text('2. Arsip.-', marginX+4, ty);
+    return ty;
+  }
+
   function downloadLetterPDF(id){
     const l = letters[id];
     if(!l){ showToast('Surat tidak ditemukan'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const marginX = 20;
     const maxW = pageWidth - marginX*2;
     let y = drawLetterhead(doc, pageWidth);
@@ -1468,7 +1553,10 @@
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(fontSize);
       const lines = doc.splitTextToSize(text, maxW);
-      lines.forEach(line=>{ doc.text(line, marginX, y); y += lineHeight; });
+      lines.forEach(line=>{
+        if(y > pageHeight - 20){ doc.addPage(); y = 20; }
+        doc.text(line, marginX, y); y += lineHeight;
+      });
     }
     function centered(text, fontSize, bold, underline){
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -1481,107 +1569,106 @@
       }
       y += 6;
     }
+    // Baris "Label : Nilai" dengan kolon rata di posisi tetap, mendukung nilai multi-baris.
+    function labelValue(label, value, fontSize, lineHeight){
+      if(y > pageHeight - 20){ doc.addPage(); y = 20; }
+      doc.setFont('helvetica','normal'); doc.setFontSize(fontSize || 10.5);
+      doc.text(label, marginX, y);
+      doc.text(':', marginX + 30, y);
+      const lines = doc.splitTextToSize(value || '-', maxW - 34);
+      lines.forEach((line, i)=> doc.text(line, marginX + 34, y + i*(lineHeight||5.2)));
+      y += Math.max(1, lines.length) * (lineHeight||5.2);
+    }
 
     if(l.type === 'mandat'){
-      centered('SURAT MANDAT', 13, true, true);
-      centered('Nomor: ' + (l.nomorSurat || '-'), 10, false, false);
-      y += 4;
-      para('Yang bertanda tangan di bawah ini, Ketua PUK FSP RTMM SPSI PT. Torabika Eka Semesta, dengan ini memberikan mandat kepada:', 10.5, 5.2, false);
-      y += 2;
-      para('Nama       : ' + l.data.penerimaNama, 10.5, 5.2, false);
-      para('Jabatan    : ' + l.data.penerimaJabatan, 10.5, 5.2, false);
-      y += 2;
-      para('Untuk melaksanakan tugas sebagai berikut:', 10.5, 5.2, false);
-      para(l.data.keperluan, 10.5, 5.2, false);
-      y += 1;
-      if(l.data.tempatTugas) para('Bertempat di : ' + l.data.tempatTugas, 10.5, 5.2, false);
-      para('Pada tanggal : ' + fmtTgl(l.data.tanggalMulai) + ' s.d. ' + fmtTgl(l.data.tanggalSelesai), 10.5, 5.2, false);
-      if(l.data.catatan){ y += 1; para('Catatan: ' + l.data.catatan, 10, 5, false); }
-      y += 3;
-      para('Demikian surat mandat ini dibuat untuk dapat dipergunakan sebagaimana mestinya.', 10.5, 5.2, false);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+      doc.text('Nomor : ' + (l.nomorSurat || '-'), marginX, y); y += 5.5;
+      doc.text('Hal      : ' + (l.data.perihal || '-'), marginX, y); y += 10;
 
-      y += 12;
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-      doc.text('Cikupa, ' + fmtTgl(l.tanggalSurat), pageWidth-marginX, y, { align:'right' });
-      y += 18;
-      doc.text('Yang Diberi Mandat,', marginX + 10, y, { align:'center' });
-      doc.text('Ketua,', pageWidth - marginX - 30, y, { align:'center' });
-      y += 22;
-      doc.text('( ' + '_'.repeat(20) + ' )', marginX + 10, y, { align:'center' });
-      doc.text('( ' + '_'.repeat(20) + ' )', pageWidth - marginX - 30, y, { align:'center' });
-      y += 6;
-      doc.setFont('helvetica','bold');
-      doc.text(l.data.penerimaNama, marginX + 10, y, { align:'center' });
-      doc.text(ROLE_NAMES.ketua, pageWidth - marginX - 30, y, { align:'center' });
+      centered('SURAT TUGAS', 14, true, true);
+      y += 3;
+
+      para('Kepada Yth,', 10.5, 5.2, false);
+      para(l.data.penerimaNama + ' (' + l.data.penerimaJabatan + ')', 10.5, 5.2, true);
+      para('Di - Tempat', 10.5, 5.2, false);
+      y += 3;
+      para('Dengan Hormat,', 10.5, 5.2, false);
+      y += 1;
+      para('Sehubungan dengan pelaksanaan kegiatan organisasi, dengan ini kami menugaskan Saudara/i tersebut di atas untuk:', 10.5, 5.2, false);
+      y += 1;
+      para(l.data.keperluan, 10.5, 5.2, false);
+      y += 2;
+
+      if(l.data.hari) labelValue('HARI', l.data.hari);
+      labelValue('TANGGAL', fmtTgl(l.data.tanggalMulai) + ' s/d ' + fmtTgl(l.data.tanggalSelesai));
+      if(l.data.jam) labelValue('JAM', l.data.jam);
+      if(l.data.tempatTugas) labelValue('TEMPAT', l.data.tempatTugas);
+      if(l.data.catatan){ y += 1; para('Catatan: ' + l.data.catatan, 10, 5, false); }
+      y += 4;
+      para('Demikian surat tugas ini diberikan untuk dapat dipergunakan sebagaimana mestinya.', 10.5, 5.2, false);
+
+      y += 10;
+      drawLetterClosing(doc, pageWidth, marginX, y, l.tanggalSurat, [
+        { role: 'Ketua', name: ROLE_NAMES.ketua },
+        { role: 'Sekretaris', name: ROLE_NAMES.sekretaris }
+      ]);
 
     } else if(l.type === 'undangan'){
       doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
-      doc.text('Nomor    : ' + (l.nomorSurat || '-'), marginX, y);
-      doc.text('Cikupa, ' + fmtTgl(l.tanggalSurat), pageWidth-marginX, y, { align:'right' });
-      y += 5.5;
+      doc.text('Nomor    : ' + (l.nomorSurat || '-'), marginX, y); y += 5.5;
       doc.text('Lampiran : -', marginX, y); y += 5.5;
-      doc.text('Perihal  : ' + l.data.perihal, marginX, y); y += 9;
+      doc.text('Perihal  : ' + l.data.perihal, marginX, y); y += 10;
 
-      para('Kepada Yth.', 10.5, 5.2, false);
+      para('Kepada Yth,', 10.5, 5.2, false);
       para(l.data.tujuanPeserta, 10.5, 5.2, true);
-      para('di tempat', 10.5, 5.2, false);
+      para('Di - Tempat', 10.5, 5.2, false);
       y += 3;
-      para('Dengan hormat,', 10.5, 5.2, false);
+      para('Dengan Hormat,', 10.5, 5.2, false);
       y += 1;
       para('Sehubungan dengan akan diselenggarakannya kegiatan organisasi, kami mengundang Bapak/Ibu/Saudara untuk hadir pada:', 10.5, 5.2, false);
       y += 2;
-      para('Hari/Tanggal : ' + fmtTgl(l.data.tanggalAcara), 10.5, 5.2, false);
-      if(l.data.waktuAcara) para('Waktu        : ' + l.data.waktuAcara + ' WIB', 10.5, 5.2, false);
-      para('Tempat       : ' + l.data.tempatAcara, 10.5, 5.2, false);
+      labelValue('HARI/TANGGAL', fmtTgl(l.data.tanggalAcara));
+      if(l.data.waktuAcara) labelValue('JAM', l.data.waktuAcara + ' WIB');
+      labelValue('TEMPAT', l.data.tempatAcara);
       if(l.data.agenda){
         y += 2;
         para('Agenda:', 10.5, 5.2, false);
         para(l.data.agenda, 10.5, 5.2, false);
       }
       if(l.data.catatan){ y += 1; para('Catatan: ' + l.data.catatan, 10, 5, false); }
-      y += 3;
+      y += 4;
       para('Demikian undangan ini kami sampaikan, atas perhatian dan kehadirannya kami ucapkan terima kasih.', 10.5, 5.2, false);
 
-      y += 14;
-      const col1 = marginX + 25, col2 = pageWidth - marginX - 25;
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-      doc.text('Sekretaris,', col1, y, { align:'center' });
-      doc.text('Ketua,', col2, y, { align:'center' });
-      y += 22;
-      doc.text('( ' + '_'.repeat(20) + ' )', col1, y, { align:'center' });
-      doc.text('( ' + '_'.repeat(20) + ' )', col2, y, { align:'center' });
-      y += 6;
-      doc.setFont('helvetica','bold');
-      doc.text(ROLE_NAMES.sekretaris, col1, y, { align:'center' });
-      doc.text(ROLE_NAMES.ketua, col2, y, { align:'center' });
+      y += 10;
+      drawLetterClosing(doc, pageWidth, marginX, y, l.tanggalSurat, [
+        { role: 'Ketua', name: ROLE_NAMES.ketua },
+        { role: 'Sekretaris', name: ROLE_NAMES.sekretaris }
+      ]);
 
     } else {
-      centered('SURAT KETERANGAN', 13, true, true);
-      centered('Nomor: ' + (l.nomorSurat || '-'), 10, false, false);
-      y += 4;
-      para('Yang bertanda tangan di bawah ini, Ketua PUK FSP RTMM SPSI PT. Torabika Eka Semesta, dengan ini menerangkan bahwa:', 10.5, 5.2, false);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+      doc.text('Nomor : ' + (l.nomorSurat || '-'), marginX, y); y += 10;
+
+      centered('SURAT KETERANGAN', 14, true, true);
+      y += 3;
+
+      para('Yang bertanda tangan di bawah ini, Ketua PUK SP RTMM-SPSI PT. Torabika Eka Semesta 1, dengan ini menerangkan bahwa:', 10.5, 5.2, false);
       y += 2;
-      para('Nama         : ' + l.data.namaDiterangkan, 10.5, 5.2, false);
-      para('Jabatan/NIK  : ' + l.data.jabatanNIK, 10.5, 5.2, false);
+      labelValue('Nama', l.data.namaDiterangkan);
+      labelValue('Jabatan/NIK', l.data.jabatanNIK);
       y += 2;
       para(l.data.isiKeterangan, 10.5, 5.2, false);
       if(l.data.masaBerlaku){ y += 1; para('Surat keterangan ini berlaku sampai dengan ' + fmtTgl(l.data.masaBerlaku) + '.', 10.5, 5.2, false); }
-      y += 3;
+      y += 4;
       para('Demikian surat keterangan ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.', 10.5, 5.2, false);
 
-      y += 14;
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-      doc.text('Cikupa, ' + fmtTgl(l.tanggalSurat), pageWidth-marginX, y, { align:'right' });
-      y += 6;
-      doc.text('Ketua,', pageWidth-marginX, y, { align:'right' });
-      y += 22;
-      doc.text('( ' + '_'.repeat(20) + ' )', pageWidth-marginX, y, { align:'right' });
-      y += 6;
-      doc.setFont('helvetica','bold');
-      doc.text(ROLE_NAMES.ketua, pageWidth-marginX, y, { align:'right' });
+      y += 10;
+      drawLetterClosing(doc, pageWidth, marginX, y, l.tanggalSurat, [
+        { role: 'Ketua', name: ROLE_NAMES.ketua }
+      ]);
     }
 
-    const fileType = l.type === 'mandat' ? 'Mandat' : (l.type === 'undangan' ? 'Undangan' : 'Keterangan');
+    const fileType = l.type === 'mandat' ? 'Tugas' : (l.type === 'undangan' ? 'Undangan' : 'Keterangan');
     doc.save(`Surat-${fileType}-${l.tanggalSurat}.pdf`);
     showToast('Surat PDF sedang diunduh');
   }
