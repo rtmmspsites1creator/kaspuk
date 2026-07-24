@@ -333,7 +333,17 @@
   }
   .tx-approve{ background:var(--green-dim); color:var(--green); }
   .tx-reject{ background:var(--rose-dim); color:var(--rose); }
-  .tx-approve svg, .tx-reject svg{ width:15px; height:15px; }
+  .tx-edit{ background:var(--mint-dim); color:var(--mint); }
+  .tx-approve svg, .tx-reject svg, .tx-edit svg{ width:15px; height:15px; }
+
+  .edit-banner{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--amber-dim); border:1px solid var(--amber); color:#7A5B00;
+    border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:12.5px; font-weight:600;
+  }
+  .edit-banner button{
+    background:none; border:none; color:var(--rose); font-weight:700; font-size:12.5px; cursor:pointer; text-decoration:underline;
+  }
 
   /* ---------- Bottom bar ---------- */
   .bottom-bar{
@@ -390,8 +400,8 @@
       <p>PUK FSP RTMM SPSI<br>PT. Torabika Eka Semesta</p>
     </div>
     <div class="field">
-      <label for="loginEmail">Email</label>
-      <input type="email" id="loginEmail" placeholder="email@contoh.com" autocomplete="username">
+      <label for="loginEmail">Username</label>
+      <input type="text" id="loginEmail" placeholder="sekretaris / ketua / bendahara" autocomplete="username" autocapitalize="none">
     </div>
     <div class="field">
       <label for="loginPassword">Kata sandi</label>
@@ -466,6 +476,10 @@
   <!-- FORM -->
   <div class="card">
     <div class="card-title">📝 Catat Transaksi</div>
+    <div class="edit-banner" id="txEditBanner" style="display:none;">
+      <span>✏️ Mode edit transaksi</span>
+      <button id="txEditCancelBtn" type="button">Batal</button>
+    </div>
     <div class="type-toggle">
       <button class="type-btn active" data-type="out" id="btnOut">↓ Pengeluaran</button>
       <button class="type-btn" data-type="in" id="btnIn">↑ Pemasukan</button>
@@ -506,6 +520,10 @@
     <!-- Buat Surat (khusus Sekretaris) -->
     <div class="card" id="suratFormCard" style="display:none;">
       <div class="card-title">✍️ Buat Surat Baru</div>
+      <div class="edit-banner" id="suratEditBanner" style="display:none;">
+        <span>✏️ Mode edit surat</span>
+        <button id="suratEditCancelBtn" type="button">Batal</button>
+      </div>
       <div class="letter-type-tabs">
         <button class="letter-type-btn active" data-lettertype="mandat">Surat Tugas</button>
         <button class="letter-type-btn" data-lettertype="undangan">Undangan</button>
@@ -698,8 +716,15 @@
   const micStatus = document.getElementById('micStatus');
   const exportBtn = document.getElementById('exportBtn');
   const toastEl = document.getElementById('toast');
+  const txEditBanner = document.getElementById('txEditBanner');
+  const txEditCancelBtn = document.getElementById('txEditCancelBtn');
+  const suratEditBanner = document.getElementById('suratEditBanner');
+  const suratEditCancelBtn = document.getElementById('suratEditCancelBtn');
 
   let selectedType = 'out';
+  let editingTxId = null;
+  let editingTxMonth = null;
+  let editingLetterId = null;
   dateInput.value = todayISO();
   suratTanggal.value = todayISO();
 
@@ -716,10 +741,20 @@
   /* ---------------- Auth & Realtime listener ---------------- */
   let txListenerRef = null;
 
+  // Pemetaan username sederhana -> email asli yang sudah terdaftar di Firebase.
+  // Tidak perlu mengubah apa pun di Firebase Console.
+  const USERNAME_MAP = {
+    'ketua': 'ketua@gmail.com',
+    'sekretaris': 'sekretaris@gmail.com',
+    'bendahara': 'bendahara@gmail.com'
+  };
+
   function doLogin(){
-    const email = loginEmail.value.trim();
+    const rawInput = loginEmail.value.trim();
     const pass = loginPassword.value;
-    if(!email || !pass){ loginError.textContent = 'Isi email dan kata sandi.'; return; }
+    if(!rawInput || !pass){ loginError.textContent = 'Isi username dan kata sandi.'; return; }
+    const key = rawInput.toLowerCase().replace(/\s+/g,'');
+    const email = rawInput.includes('@') ? rawInput : (USERNAME_MAP[key] || key);
     loginBtn.disabled = true;
     loginError.textContent = '';
     auth.signInWithEmailAndPassword(email, pass)
@@ -728,7 +763,7 @@
         if(code === 'auth/unauthorized-domain'){
           loginError.textContent = 'Domain ini belum diizinkan di Firebase (cek Authentication → Settings → Authorized domains).';
         } else if(code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential'){
-          loginError.textContent = 'Email atau kata sandi salah.';
+          loginError.textContent = 'Username atau kata sandi salah.';
         } else if(code === 'auth/too-many-requests'){
           loginError.textContent = 'Terlalu banyak percobaan, coba lagi beberapa menit lagi.';
         } else if(code === 'auth/network-request-failed'){
@@ -849,6 +884,35 @@
     saveBtn.disabled = true;
     const isKetua = currentRole === 'ketua';
 
+    if(editingTxId){
+      // ---- Mode edit: update transaksi yang sudah ada (masih berstatus pending) ----
+      const updates = { date, type: selectedType, desc, amount };
+      let op;
+      if(monthKey === editingTxMonth){
+        op = fdb.ref('transactions/' + editingTxMonth + '/' + editingTxId).update(updates);
+      } else {
+        // Tanggal diubah ke bulan lain: pindahkan data ke node bulan yang baru
+        const oldRef = fdb.ref('transactions/' + editingTxMonth + '/' + editingTxId);
+        op = oldRef.once('value').then(snap=>{
+          const old = snap.val();
+          if(!old) throw new Error('not-found');
+          const merged = Object.assign({}, old, updates);
+          return fdb.ref('transactions/' + monthKey).push(merged)
+            .then(()=> oldRef.remove());
+        });
+      }
+      op.then(()=>{
+        cancelEditTx();
+        currentMonth = monthKey;
+        showToast('Transaksi diperbarui');
+      }).catch(()=>{
+        showToast('Gagal memperbarui transaksi');
+      }).finally(()=>{
+        saveBtn.disabled = false;
+      });
+      return;
+    }
+
     fdb.ref('transactions/' + monthKey).push({
       date, type: selectedType, desc, amount,
       status: isKetua ? 'approved' : 'pending',
@@ -869,6 +933,33 @@
       saveBtn.disabled = false;
     });
   });
+
+  function startEditTx(id){
+    const t = (db[currentMonth] || {})[id];
+    if(!t){ showToast('Transaksi tidak ditemukan'); return; }
+    switchTab('keuangan');
+    editingTxId = id;
+    editingTxMonth = currentMonth;
+    dateInput.value = t.date;
+    descInput.value = t.desc;
+    amountInput.value = t.amount.toLocaleString('id-ID');
+    setType(t.type);
+    txEditBanner.style.display = 'flex';
+    saveBtn.textContent = 'Update Transaksi';
+    descInput.focus();
+  }
+
+  function cancelEditTx(){
+    editingTxId = null;
+    editingTxMonth = null;
+    descInput.value = '';
+    amountInput.value = '';
+    dateInput.value = todayISO();
+    setType('out');
+    txEditBanner.style.display = 'none';
+    saveBtn.textContent = 'Simpan Transaksi';
+  }
+  txEditCancelBtn.addEventListener('click', cancelEditTx);
 
   /* ---------------- Approve / Reject (khusus Ketua) ---------------- */
   function approveTx(id){
@@ -936,6 +1027,28 @@
   }
 
   suratSubmitBtn.addEventListener('click', ()=>{
+    if(editingLetterId){
+      const original = letters[editingLetterId];
+      const allowed = original && (currentRole === 'ketua' || original.createdByUid === currentUid);
+      if(!allowed){ showToast('Tidak punya izin mengedit surat ini'); return; }
+      const data = collectLetterData();
+      if(!data) return;
+      suratSubmitBtn.disabled = true;
+      fdb.ref('letters/' + editingLetterId).update({
+        tanggalSurat: suratTanggal.value || todayISO(),
+        data: data
+      }).then(()=>{
+        cancelEditLetter();
+        showToast('Surat diperbarui');
+      }).catch(err=>{
+        const code = err && err.code ? err.code : '';
+        showToast(code === 'PERMISSION_DENIED' ? 'Ditolak sistem: Rules Firebase belum diperbarui' : 'Gagal memperbarui surat');
+      }).finally(()=>{
+        suratSubmitBtn.disabled = false;
+      });
+      return;
+    }
+
     if(currentRole !== 'sekretaris'){ showToast('Hanya Sekretaris yang bisa membuat surat'); return; }
     const data = collectLetterData();
     if(!data) return;
@@ -967,6 +1080,63 @@
       suratSubmitBtn.disabled = false;
     });
   });
+
+  function selectLetterType(type){
+    selectedLetterType = type;
+    document.querySelectorAll('.letter-type-btn').forEach(b=> b.classList.toggle('active', b.dataset.lettertype === type));
+    document.getElementById('fieldsMandat').style.display = type === 'mandat' ? 'block' : 'none';
+    document.getElementById('fieldsUndangan').style.display = type === 'undangan' ? 'block' : 'none';
+    document.getElementById('fieldsKeterangan').style.display = type === 'keterangan' ? 'block' : 'none';
+  }
+
+  function startEditLetter(id){
+    const l = letters[id];
+    if(!l){ showToast('Surat tidak ditemukan'); return; }
+    switchTab('surat');
+    suratFormCard.style.display = 'block';
+    selectLetterType(l.type);
+    suratTanggal.value = l.tanggalSurat || todayISO();
+
+    if(l.type === 'mandat'){
+      document.getElementById('mandatNama').value = l.data.penerimaNama || '';
+      document.getElementById('mandatJabatan').value = l.data.penerimaJabatan || '';
+      document.getElementById('mandatPerihal').value = l.data.perihal || '';
+      document.getElementById('mandatKeperluan').value = l.data.keperluan || '';
+      document.getElementById('mandatHari').value = l.data.hari || '';
+      document.getElementById('mandatJam').value = l.data.jam || '';
+      document.getElementById('mandatTempat').value = l.data.tempatTugas || '';
+      document.getElementById('mandatMulai').value = l.data.tanggalMulai || '';
+      document.getElementById('mandatSelesai').value = l.data.tanggalSelesai || '';
+      document.getElementById('mandatCatatan').value = l.data.catatan || '';
+    } else if(l.type === 'undangan'){
+      document.getElementById('undPerihal').value = l.data.perihal || '';
+      document.getElementById('undTujuan').value = l.data.tujuanPeserta || '';
+      document.getElementById('undTanggalAcara').value = l.data.tanggalAcara || '';
+      document.getElementById('undWaktu').value = l.data.waktuAcara || '';
+      document.getElementById('undTempat').value = l.data.tempatAcara || '';
+      document.getElementById('undAgenda').value = l.data.agenda || '';
+      document.getElementById('undCatatan').value = l.data.catatan || '';
+    } else {
+      document.getElementById('ketNama').value = l.data.namaDiterangkan || '';
+      document.getElementById('ketJabatan').value = l.data.jabatanNIK || '';
+      document.getElementById('ketIsi').value = l.data.isiKeterangan || '';
+      document.getElementById('ketBerlaku').value = l.data.masaBerlaku || '';
+    }
+
+    editingLetterId = id;
+    suratEditBanner.style.display = 'flex';
+    suratSubmitBtn.textContent = 'Update Surat';
+    suratFormCard.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function cancelEditLetter(){
+    editingLetterId = null;
+    clearLetterForm();
+    suratEditBanner.style.display = 'none';
+    suratSubmitBtn.textContent = 'Kirim untuk ACC Ketua';
+    if(currentRole !== 'sekretaris') suratFormCard.style.display = 'none';
+  }
+  suratEditCancelBtn.addEventListener('click', cancelEditLetter);
 
   function approveLetter(id){
     if(currentRole !== 'ketua') return;
@@ -1029,6 +1199,7 @@
   const iconCheck = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
   const iconX = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
   const iconClock = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`;
+  const iconEdit = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 
   function renderList(){
     const list = getMonthList().filter(t=>t.status === 'approved').sort((a,b)=> b.date.localeCompare(a.date));
@@ -1062,7 +1233,9 @@
     if(!list.length){ pendingListEl.innerHTML = ''; return; }
 
     const isKetua = currentRole === 'ketua';
-    pendingListEl.innerHTML = list.map(t => `
+    pendingListEl.innerHTML = list.map(t => {
+      const canEdit = isKetua || t.createdByUid === currentUid;
+      return `
       <div class="tx-row pending">
         <div class="tx-icon ${t.type}">${t.type==='in' ? iconIn : iconOut}</div>
         <div class="tx-body">
@@ -1071,14 +1244,18 @@
           <div class="tx-status">${iconClock} Menunggu ACC Ketua</div>
         </div>
         <div class="tx-amount ${t.type}">${t.type==='in'?'+':'-'}${formatRupiah(t.amount)}</div>
-        ${isKetua ? `
-          <div class="tx-actions">
-            <button class="tx-approve" data-id="${t.id}" aria-label="Setujui">${iconCheck}</button>
-            <button class="tx-reject" data-id="${t.id}" aria-label="Tolak">${iconX}</button>
-          </div>` : ''}
+        <div class="tx-actions">
+          ${canEdit ? `<button class="tx-edit" data-id="${t.id}" aria-label="Edit">${iconEdit}</button>` : ''}
+          ${isKetua ? `<button class="tx-approve" data-id="${t.id}" aria-label="Setujui">${iconCheck}</button>
+            <button class="tx-reject" data-id="${t.id}" aria-label="Tolak">${iconX}</button>` : ''}
+        </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
+    pendingListEl.querySelectorAll('.tx-edit').forEach(btn=>{
+      btn.addEventListener('click', ()=> startEditTx(btn.dataset.id));
+    });
     pendingListEl.querySelectorAll('.tx-approve').forEach(btn=>{
       btn.addEventListener('click', ()=> approveTx(btn.dataset.id));
     });
@@ -1117,7 +1294,9 @@
     suratPendingCount.textContent = pending.length;
     suratPendingSection.style.display = pending.length ? 'block' : 'none';
     const isKetua = currentRole === 'ketua';
-    suratPendingList.innerHTML = pending.map(l => `
+    suratPendingList.innerHTML = pending.map(l => {
+      const canEdit = isKetua || l.createdByUid === currentUid;
+      return `
       <div class="letter-row pending">
         <div class="letter-icon">${letterIcon(l.type)}</div>
         <div class="letter-body">
@@ -1125,13 +1304,15 @@
           <div class="letter-sub">${escapeHTML(letterSummary(l))}</div>
           <div class="tx-status">${iconClock} Menunggu ACC · oleh ${escapeHTML(l.createdByName||'-')}</div>
         </div>
-        ${isKetua ? `
-          <div class="tx-actions">
-            <button class="tx-approve" data-id="${l.id}" aria-label="Setujui">${iconCheck}</button>
-            <button class="tx-reject" data-id="${l.id}" aria-label="Tolak">${iconX}</button>
-          </div>` : ''}
+        <div class="tx-actions">
+          ${canEdit ? `<button class="tx-edit" data-id="${l.id}" aria-label="Edit">${iconEdit}</button>` : ''}
+          ${isKetua ? `<button class="tx-approve" data-id="${l.id}" aria-label="Setujui">${iconCheck}</button>
+            <button class="tx-reject" data-id="${l.id}" aria-label="Tolak">${iconX}</button>` : ''}
+        </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
+    suratPendingList.querySelectorAll('.tx-edit').forEach(btn=> btn.addEventListener('click', ()=> startEditLetter(btn.dataset.id)));
     suratPendingList.querySelectorAll('.tx-approve').forEach(btn=> btn.addEventListener('click', ()=> approveLetter(btn.dataset.id)));
     suratPendingList.querySelectorAll('.tx-reject').forEach(btn=> btn.addEventListener('click', ()=> rejectLetter(btn.dataset.id)));
 
