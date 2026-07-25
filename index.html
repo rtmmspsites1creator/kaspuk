@@ -14,7 +14,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -40,7 +40,7 @@
     --green-dim:#DEF3E6;
     --font-display:'Space Grotesk', sans-serif;
     --font-body:'Inter', sans-serif;
-    --font-mono:'JetBrains Mono', monospace;
+    --font-mono:'Inter', sans-serif;
     --radius:18px;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -78,7 +78,7 @@
   .brand-name{ font-family:var(--font-display); font-weight:700; font-size:18px; letter-spacing:-0.02em; }
   select#monthSelect{
     background:var(--surface-2); color:var(--text); border:1px solid var(--border);
-    border-radius:10px; padding:8px 10px; font-family:var(--font-mono); font-size:13px;
+    border-radius:10px; padding:8px 10px; font-family:var(--font-mono); font-size:13px; font-variant-numeric:tabular-nums;
     font-weight:500; appearance:none; -webkit-appearance:none;
   }
   .role-bar{
@@ -148,7 +148,7 @@
   .letter-body{ flex:1; min-width:0; }
   .letter-title{ font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .letter-sub{ font-size:11.5px; color:var(--text-muted); margin-top:1px; }
-  .letter-nomor{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted); margin-top:2px; }
+  .letter-nomor{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted); margin-top:2px; font-variant-numeric:tabular-nums; }
   .letter-download{
     width:34px; height:34px; border-radius:9px; border:none; background:var(--mint-dim); color:var(--mint);
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
@@ -199,7 +199,7 @@
     color:var(--text-muted); font-weight:600; margin-bottom:4px;
   }
   .saldo-value{
-    font-family:var(--font-mono); font-weight:700; font-size:34px;
+    font-family:var(--font-mono); font-weight:700; font-size:34px; font-variant-numeric:tabular-nums;
     letter-spacing:-0.01em; font-variant-numeric:tabular-nums;
   }
   .saldo-value.negative{ color:var(--rose); }
@@ -218,7 +218,7 @@
   .dot.in{ background:var(--mint); }
   .dot.out{ background:var(--rose); }
   .mini-value{
-    font-family:var(--font-mono); font-weight:700; font-size:17px;
+    font-family:var(--font-mono); font-weight:700; font-size:17px; font-variant-numeric:tabular-nums;
     font-variant-numeric:tabular-nums;
   }
   .mini-value.in{ color:var(--mint); }
@@ -268,7 +268,7 @@
     width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
     border-radius:12px; padding:13px 14px; font-size:15px; font-family:var(--font-body);
   }
-  .field input#amountInput{ font-family:var(--font-mono); font-weight:600; font-size:17px; }
+  .field input#amountInput{ font-family:var(--font-mono); font-weight:600; font-size:17px; font-variant-numeric:tabular-nums; }
   .field input:focus{ outline:none; border-color:var(--mint); }
 
   #saveBtn{
@@ -302,7 +302,7 @@
   .tx-desc{ font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tx-date{ font-size:11.5px; color:var(--text-muted); margin-top:1px; }
   .tx-meta{ font-size:11px; color:var(--text-muted); opacity:0.75; }
-  .tx-amount{ font-family:var(--font-mono); font-weight:700; font-size:14.5px; white-space:nowrap; }
+  .tx-amount{ font-family:var(--font-mono); font-weight:700; font-size:14.5px; white-space:nowrap; font-variant-numeric:tabular-nums; }
   .tx-amount.in{ color:var(--mint); }
   .tx-amount.out{ color:var(--rose); }
   .tx-del{
@@ -844,9 +844,24 @@
   /* ---------------- Month select ---------------- */
   function renderMonthOptions(){
     const keys = Object.keys(db);
-    if(!keys.includes(currentMonth)) keys.push(currentMonth);
-    keys.sort().reverse();
-    monthSelect.innerHTML = keys.map(k =>
+    keys.push(currentMonth);
+    keys.push(getMonthKey(new Date())); // pastikan bulan berjalan (hari ini) selalu ada
+
+    let minKey = keys[0], maxKey = keys[0];
+    keys.forEach(k=>{ if(k < minKey) minKey = k; if(k > maxKey) maxKey = k; });
+
+    // Isi semua bulan di antara minKey..maxKey supaya tidak ada yang bolong,
+    // walau bulan itu belum punya transaksi sama sekali.
+    let [y, m] = minKey.split('-').map(Number);
+    const [maxY, maxM] = maxKey.split('-').map(Number);
+    const filled = [];
+    while(y < maxY || (y === maxY && m <= maxM)){
+      filled.push(y + '-' + String(m).padStart(2,'0'));
+      m++;
+      if(m > 12){ m = 1; y++; }
+    }
+    filled.sort().reverse();
+    monthSelect.innerHTML = filled.map(k =>
       `<option value="${k}" ${k===currentMonth?'selected':''}>${monthLabel(k)}</option>`
     ).join('');
   }
@@ -1552,15 +1567,20 @@
     doc.text('Saldo Awal Bulan Ini : ' + formatRupiah(openingBalance), marginX, cursorY);
     cursorY += 8;
 
+    function formatAngka(n){
+      n = Math.round(n||0);
+      return n.toLocaleString('id-ID');
+    }
+
     let runningSaldo = openingBalance;
     const body = list.map(t => {
       runningSaldo += (t.type === 'in' ? t.amount : -t.amount);
       return [
         formatDateShort(t.date),
         t.desc,
-        t.type === 'in' ? formatRupiah(t.amount) : '-',
-        t.type === 'out' ? formatRupiah(t.amount) : '-',
-        formatRupiah(runningSaldo)
+        t.type === 'in' ? formatAngka(t.amount) : '-',
+        t.type === 'out' ? formatAngka(t.amount) : '-',
+        formatAngka(runningSaldo)
       ];
     });
 
