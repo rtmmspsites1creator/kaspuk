@@ -1181,11 +1181,26 @@
     return Object.keys(monthObj).map(id => ({ id, status: 'approved', ...monthObj[id] }));
   }
 
+  // Menjumlahkan seluruh transaksi approved dari bulan-bulan SEBELUM bulan yang diberikan (saldo awal bawaan).
+  function getOpeningBalance(beforeMonthKey){
+    let total = 0;
+    Object.keys(db).forEach(monthKey=>{
+      if(monthKey >= beforeMonthKey) return;
+      const monthObj = db[monthKey] || {};
+      Object.values(monthObj).forEach(t=>{
+        if(t.status !== 'approved') return;
+        total += (t.type === 'in' ? t.amount : -t.amount);
+      });
+    });
+    return total;
+  }
+
   function renderDashboard(){
     const list = getMonthList().filter(t=>t.status === 'approved');
     const totalIn = list.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
     const totalOut = list.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
-    const saldo = totalIn - totalOut;
+    const opening = getOpeningBalance(currentMonth);
+    const saldo = opening + totalIn - totalOut;
     totalInEl.textContent = formatRupiah(totalIn);
     totalOutEl.textContent = formatRupiah(totalOut);
     saldoValue.textContent = formatRupiah(saldo);
@@ -1529,9 +1544,15 @@
 
     const totalIn = list.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
     const totalOut = list.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
-    const saldo = totalIn - totalOut;
+    const openingBalance = getOpeningBalance(currentMonth);
+    const saldo = openingBalance + totalIn - totalOut;
 
-    let runningSaldo = 0;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text('Saldo Awal Bulan Ini : ' + formatRupiah(openingBalance), marginX, cursorY);
+    cursorY += 8;
+
+    let runningSaldo = openingBalance;
     const body = list.map(t => {
       runningSaldo += (t.type === 'in' ? t.amount : -t.amount);
       return [
@@ -1543,9 +1564,8 @@
       ];
     });
 
-    // ---- Pilih ukuran font & padding tabel otomatis agar selalu muat 1 halaman ----
-    const FOOTER_RESERVE = 92; // ruang kira-kira yang dibutuhkan saldo akhir + blok tanda tangan
-    const availableForTable = pageHeight - cursorY - FOOTER_RESERVE;
+    // ---- Pilih ukuran font & padding tabel dengan cara mengukur hasil render asli ----
+    // (bukan menebak rumus) supaya baris keterangan yang panjang & turun ke 2 baris tetap terhitung akurat.
     const sizeCandidates = [
       { fontSize: 9,   pad: 3.2 },
       { fontSize: 8.5, pad: 2.6 },
@@ -1557,32 +1577,44 @@
       { fontSize: 5.5, pad: 0.7 },
       { fontSize: 5,   pad: 0.5 }
     ];
+    const FOOTER_SPACE_NEEDED = 10 + 14 + 55; // saldo akhir + jarak + tinggi blok tanda tangan
+    const tableHead = [['Tanggal','Keterangan','Pemasukan','Pengeluaran','Saldo']];
+    const tableFoot = [['', 'TOTAL', formatRupiah(totalIn), formatRupiah(totalOut), formatRupiah(saldo)]];
+    const tableColumnStyles = {
+      0: { cellWidth: 24 },
+      2: { halign:'right' },
+      3: { halign:'right' },
+      4: { halign:'right', fontStyle:'bold' }
+    };
+
     let tableStyle = sizeCandidates[sizeCandidates.length - 1];
     for(const cand of sizeCandidates){
-      const rowH = cand.fontSize * 0.3528 * 1.15 + cand.pad * 2;
-      const estimatedHeight = (body.length + 2) * rowH; // +2 untuk baris head & footer
-      if(estimatedHeight <= availableForTable){ tableStyle = cand; break; }
+      const trialDoc = new jsPDF();
+      trialDoc.autoTable({
+        head: tableHead, body: body, foot: tableFoot, startY: cursorY,
+        styles: { font:'helvetica', fontSize: cand.fontSize, cellPadding: cand.pad },
+        headStyles: { fillColor: [29, 99, 180], textColor: [255,255,255], halign:'center' },
+        footStyles: { fillColor: [238,242,247], textColor: [22,32,43], fontStyle:'bold', halign:'right' },
+        columnStyles: tableColumnStyles
+      });
+      const trialEnd = trialDoc.lastAutoTable.finalY;
+      if(trialEnd + FOOTER_SPACE_NEEDED <= pageHeight - 10){ tableStyle = cand; break; }
     }
 
     doc.autoTable({
-      head: [['Tanggal','Keterangan','Pemasukan','Pengeluaran','Saldo']],
+      head: tableHead,
       body: body,
       startY: cursorY,
       styles: { font:'helvetica', fontSize: tableStyle.fontSize, cellPadding: tableStyle.pad },
       headStyles: { fillColor: [29, 99, 180], textColor: [255,255,255], halign:'center' },
-      columnStyles: {
-        0: { cellWidth: 24 },
-        2: { halign:'right' },
-        3: { halign:'right' },
-        4: { halign:'right', fontStyle:'bold' }
-      },
+      columnStyles: tableColumnStyles,
       didParseCell: function(data){
         if(data.section === 'body'){
           if(data.column.index === 2 && data.cell.raw !== '-') data.cell.styles.textColor = [29,99,180];
           if(data.column.index === 3 && data.cell.raw !== '-') data.cell.styles.textColor = [220,38,38];
         }
       },
-      foot: [['', 'TOTAL', formatRupiah(totalIn), formatRupiah(totalOut), formatRupiah(saldo)]],
+      foot: tableFoot,
       footStyles: { fillColor: [238,242,247], textColor: [22,32,43], fontStyle:'bold', halign:'right' }
     });
 
