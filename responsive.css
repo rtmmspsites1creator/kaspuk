@@ -9,8 +9,12 @@
 @media (min-width: 960px) {
 
   /* ---------- Kerangka utama: sidebar + konten ---------- */
+  /* Catatan: script utama aplikasi menyetel appRoot.style.display = 'block'
+     langsung sebagai inline style saat login berhasil. Inline style selalu
+     menang melawan aturan CSS biasa dari file eksternal, jadi baris
+     "display" di bawah ini WAJIB pakai !important supaya grid-nya aktif. */
   #appRoot {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 250px minmax(0, 1fr);
     align-items: start;
     min-height: 100vh;
