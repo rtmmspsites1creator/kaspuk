@@ -16,6 +16,14 @@
   #appRoot {
     display: grid !important;
     grid-template-columns: 250px minmax(0, 1fr);
+    /* WAJIB didefinisikan eksplisit: appRoot punya 3 anak langsung di
+       kolom 2 (header, .wrap, .bottom-bar), masing-masing baris sendiri.
+       Tanpa ini, "grid-row: 1 / -1" di #rkSidebar tidak bisa menghitung
+       baris terakhir dengan benar (karena grid tidak pernah punya baris
+       eksplisit), sehingga sidebar dianggap cuma menempati baris 1 dan
+       baris itu dipaksa setinggi 100vh — inilah penyebab area kosong
+       besar + scroll berlebih di layar desktop. */
+    grid-template-rows: auto 1fr auto;
     align-items: start;
     min-height: 100vh;
   }
