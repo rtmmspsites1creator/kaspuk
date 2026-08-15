@@ -1,0 +1,173 @@
+/* =========================================================
+   RekapKas — Responsive Layer
+   Tidak mengubah tampilan mobile sama sekali (< 960px).
+   Di layar ≥ 960px, dipasangkan dengan responsive-enhance.js
+   yang memindahkan brand, navigasi tab, dan info user ke
+   sidebar kiri, lalu menata konten jadi grid dua kolom.
+   ========================================================= */
+
+@media (min-width: 960px) {
+
+  /* ---------- Kerangka utama: sidebar + konten ---------- */
+  #appRoot {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    align-items: start;
+    min-height: 100vh;
+  }
+
+  #appRoot > header,
+  #appRoot > .wrap,
+  #appRoot > .bottom-bar {
+    grid-column: 2;
+  }
+
+  /* Sidebar dibuat oleh responsive-enhance.js */
+  #rkSidebar {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+    box-sizing: border-box;
+  }
+
+  #rkSidebar .brand {
+    padding: 4px 8px 20px;
+  }
+  #rkSidebar .brand-mark { width: 40px; height: 40px; }
+  #rkSidebar .brand-name { font-size: 19px; }
+
+  /* Navigasi vertikal di sidebar (dulunya .main-tabs horizontal) */
+  #rkSidebar .main-tabs {
+    flex-direction: column;
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  #rkSidebar .main-tab {
+    justify-content: flex-start;
+    text-align: left;
+    padding: 11px 12px;
+    border-radius: 10px;
+  }
+  #rkSidebar .main-tab.active {
+    background: var(--mint-dim);
+    color: var(--mint);
+    box-shadow: none;
+  }
+
+  /* Dorong info role + logout ke dasar sidebar */
+  #rkSidebar .sidebar-spacer { flex: 1; }
+  #rkSidebar .role-bar {
+    padding: 14px 4px 0;
+    border-top: 1px solid var(--border);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  #rkSidebar .role-pill { width: 100%; box-sizing: border-box; }
+  #rkSidebar #logoutBtn { text-align: left; padding: 4px; }
+
+  /* ---------- Header: hanya berisi judul halaman + bulan ---------- */
+  header .header-inner {
+    max-width: none;
+    padding: 18px 32px 12px;
+    justify-content: space-between;
+  }
+  #rkPageTitle {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0;
+  }
+  header .role-bar { display: none; } /* sudah dipindah ke sidebar */
+
+  /* ---------- Lebar konten & padding ---------- */
+  .wrap {
+    max-width: 1100px;
+    margin: 0;
+    padding: 0 32px 40px;
+  }
+
+  /* ---------- Dashboard Keuangan: grid 2 kolom ---------- */
+  #viewKeuangan {
+    display: grid;
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  #viewKeuangan .receipt-holder { grid-column: 1; grid-row: 1; margin-top: 8px; }
+  #viewKeuangan .mic-zone       { grid-column: 1; grid-row: 2; }
+  #viewKeuangan .card           { grid-column: 2; grid-row: 1 / span 2; margin-top: 8px; }
+  #viewKeuangan .pending-section,
+  #viewKeuangan .list-header,
+  #viewKeuangan #txList {
+    grid-column: 1 / -1;
+  }
+
+  /* Daftar transaksi jadi 2 kolom biar tidak terlalu memanjang ke bawah */
+  #txList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 10px;
+  }
+  #txList .tx-row { margin-bottom: 0; }
+
+  /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
+  #viewSurat {
+    display: grid;
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  #viewSurat #suratFormCard {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    position: sticky;
+    top: 24px;
+    margin-top: 8px;
+  }
+  #viewSurat #suratPendingSection,
+  #viewSurat > .list-header,
+  #viewSurat #suratArchiveList {
+    grid-column: 2;
+  }
+  /* Kalau sekretaris tidak melihat form (form disembunyikan JS),
+     arsip otomatis full width karena grid-column tetap 2 tapi kolom 1 kosong */
+
+  /* ---------- Footer / bottom bar: dari fixed jadi bagian alur biasa ---------- */
+  .bottom-bar {
+    position: static;
+    background: transparent;
+    backdrop-filter: none;
+    border-top: none;
+    padding: 24px 32px 0;
+  }
+  .bottom-bar-inner { max-width: 1100px; margin: 0; }
+  #exportBtn { width: auto; padding: 12px 22px; }
+
+  /* body tidak perlu padding-bottom ekstra lagi karena bottom-bar tak lagi fixed */
+  body { padding-bottom: 0; }
+
+  /* ---------- Rapikan lebar form 2 kolom kecil ---------- */
+  .field.two-col { grid-template-columns: 1fr 1fr; }
+
+  /* Install bar lebih ramping di desktop */
+  .install-bar { margin-top: 0; }
+}
+
+/* Layar sangat lebar (monitor besar): beri sedikit ruang tambahan
+   tanpa membuat kolom form/list jadi terlalu lebar dibaca */
+@media (min-width: 1440px) {
+  .wrap { max-width: 1280px; }
+  #viewKeuangan { grid-template-columns: 420px minmax(0, 1fr); }
+  #viewSurat { grid-template-columns: 460px minmax(0, 1fr); }
+}
