@@ -82,9 +82,11 @@
 
   /* ---------- Header: hanya berisi judul halaman + bulan ---------- */
   header .header-inner {
-    max-width: none;
+    max-width: 1100px;
+    margin: 0 auto;
     padding: 18px 32px 12px;
     justify-content: space-between;
+    box-sizing: border-box;
   }
   #rkPageTitle {
     font-family: var(--font-display);
@@ -97,8 +99,9 @@
   /* ---------- Lebar konten & padding ---------- */
   .wrap {
     max-width: 1100px;
-    margin: 0;
+    margin: 0 auto;
     padding: 0 32px 40px;
+    box-sizing: border-box;
   }
 
   /* ---------- Dashboard Keuangan: grid 2 kolom ---------- */
@@ -155,7 +158,7 @@
     border-top: none;
     padding: 24px 32px 0;
   }
-  .bottom-bar-inner { max-width: 1100px; margin: 0; }
+  .bottom-bar-inner { max-width: 1100px; margin: 0 auto; }
   #exportBtn { width: auto; padding: 12px 22px; }
 
   /* body tidak perlu padding-bottom ekstra lagi karena bottom-bar tak lagi fixed */
@@ -172,6 +175,8 @@
    tanpa membuat kolom form/list jadi terlalu lebar dibaca */
 @media (min-width: 1440px) {
   .wrap { max-width: 1280px; }
+  header .header-inner { max-width: 1280px; }
+  .bottom-bar-inner { max-width: 1280px; margin: 0 auto; }
   #viewKeuangan { grid-template-columns: 420px minmax(0, 1fr); }
   #viewSurat { grid-template-columns: 460px minmax(0, 1fr); }
 }
