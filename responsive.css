@@ -16,14 +16,6 @@
   #appRoot {
     display: grid !important;
     grid-template-columns: 250px minmax(0, 1fr);
-    /* WAJIB didefinisikan eksplisit: appRoot punya 3 anak langsung di
-       kolom 2 (header, .wrap, .bottom-bar), masing-masing baris sendiri.
-       Tanpa ini, "grid-row: 1 / -1" di #rkSidebar tidak bisa menghitung
-       baris terakhir dengan benar (karena grid tidak pernah punya baris
-       eksplisit), sehingga sidebar dianggap cuma menempati baris 1 dan
-       baris itu dipaksa setinggi 100vh — inilah penyebab area kosong
-       besar + scroll berlebih di layar desktop. */
-    grid-template-rows: auto 1fr auto;
     align-items: start;
     min-height: 100vh;
   }
@@ -113,8 +105,12 @@
   }
 
   /* ---------- Dashboard Keuangan: grid 2 kolom ---------- */
+  /* Catatan: switchTab() di script utama menyetel
+     viewKeuangan.style.display = 'block'/'none' langsung sebagai inline
+     style setiap ganti tab. Sama seperti kasus #appRoot, ini WAJIB pakai
+     !important supaya grid 2 kolom di bawah ini benar-benar aktif. */
   #viewKeuangan {
-    display: grid;
+    display: grid !important;
     grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
@@ -137,8 +133,10 @@
   #txList .tx-row { margin-bottom: 0; }
 
   /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
+  /* Sama seperti #viewKeuangan: switchTab() menyetel inline
+     viewSurat.style.display = 'block'/'none', jadi butuh !important. */
   #viewSurat {
-    display: grid;
+    display: grid !important;
     grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
@@ -170,7 +168,10 @@
   #exportBtn { width: auto; padding: 12px 22px; }
 
   /* body tidak perlu padding-bottom ekstra lagi karena bottom-bar tak lagi fixed */
-  body { padding-bottom: 0; }
+  /* switchTab() juga menyetel body.style.paddingBottom = '100px' inline
+     saat tab Keuangan aktif (disiapkan untuk bottom-bar fixed di mobile).
+     Di desktop bottom-bar sudah tidak fixed lagi, jadi paksa 0. */
+  body { padding-bottom: 0 !important; }
 
   /* ---------- Rapikan lebar form 2 kolom kecil ---------- */
   .field.two-col { grid-template-columns: 1fr 1fr; }
