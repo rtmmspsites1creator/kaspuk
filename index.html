@@ -327,7 +327,7 @@
     font-size:10.5px; font-weight:700; color:var(--amber); display:flex; align-items:center; gap:4px; margin-top:1px;
   }
   .tx-actions{ display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
-  .tx-approve, .tx-reject{
+  .tx-approve, .tx-reject, .tx-edit{
     width:30px; height:30px; border-radius:9px; border:none; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
   }
@@ -1180,6 +1180,16 @@
       .catch(()=> showToast('Gagal menolak surat'));
   }
 
+  function deleteLetter(id){
+    if(currentRole !== 'ketua'){
+      showToast('Hanya Ketua yang bisa menghapus surat');
+      return;
+    }
+    fdb.ref('letters/' + id).remove()
+      .then(()=> showToast('Surat dihapus'))
+      .catch(()=> showToast('Gagal menghapus, tidak punya izin'));
+  }
+
   /* ---------------- Delete transaction ---------------- */
   function deleteTx(id){
     if(currentRole !== 'ketua'){
@@ -1248,10 +1258,16 @@
           <div class="tx-date">${formatDateShort(t.date)}${t.createdByName ? ' · oleh ' + escapeHTML(t.createdByName) : ''}</div>
         </div>
         <div class="tx-amount ${t.type}">${t.type==='in'?'+':'-'}${formatRupiah(t.amount)}</div>
-        ${canDelete ? `<button class="tx-del" data-id="${t.id}" aria-label="Hapus">${iconTrash}</button>` : ''}
+        ${canDelete ? `<div class="tx-actions">
+          <button class="tx-edit" data-id="${t.id}" aria-label="Edit">${iconEdit}</button>
+          <button class="tx-del" data-id="${t.id}" aria-label="Hapus">${iconTrash}</button>
+        </div>` : ''}
       </div>
     `).join('');
 
+    txListEl.querySelectorAll('.tx-edit').forEach(btn=>{
+      btn.addEventListener('click', ()=> startEditTx(btn.dataset.id));
+    });
     txListEl.querySelectorAll('.tx-del').forEach(btn=>{
       btn.addEventListener('click', ()=> deleteTx(btn.dataset.id));
     });
@@ -1359,11 +1375,21 @@
             <div class="letter-sub">${escapeHTML(letterSummary(l))}</div>
             <div class="letter-nomor">${escapeHTML(l.nomorSurat||'-')}</div>
           </div>
-          <button class="letter-download" data-id="${l.id}" aria-label="Unduh PDF">${iconDownload}</button>
+          <div class="tx-actions">
+            ${isKetua ? `<button class="tx-edit" data-id="${l.id}" aria-label="Edit">${iconEdit}</button>
+            <button class="tx-del" data-id="${l.id}" aria-label="Hapus">${iconTrash}</button>` : ''}
+            <button class="letter-download" data-id="${l.id}" aria-label="Unduh PDF">${iconDownload}</button>
+          </div>
         </div>
       `).join('');
       suratArchiveList.querySelectorAll('.letter-download').forEach(btn=>{
         btn.addEventListener('click', ()=> downloadLetterPDF(btn.dataset.id));
+      });
+      suratArchiveList.querySelectorAll('.tx-edit').forEach(btn=>{
+        btn.addEventListener('click', ()=> startEditLetter(btn.dataset.id));
+      });
+      suratArchiveList.querySelectorAll('.tx-del').forEach(btn=>{
+        btn.addEventListener('click', ()=> deleteLetter(btn.dataset.id));
       });
     }
   }
