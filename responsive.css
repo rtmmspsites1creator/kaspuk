@@ -107,14 +107,25 @@
   }
 
   /* ---------- Dashboard Keuangan: dua kolom dengan lebar terbatas ---------- */
-  /* Catatan: switchTab() di script utama menyetel
-     viewKeuangan.style.display = 'block'/'none' langsung sebagai inline
-     style setiap ganti tab. Sama seperti kasus #appRoot, ini WAJIB pakai
-     !important supaya grid di bawah ini benar-benar aktif.
+  /* Catatan PENTING soal bug "blank + harus scroll ke menu":
+     switchTab() di script utama menyetel viewKeuangan.style.display dan
+     viewSurat.style.display langsung sebagai inline style ('block' atau
+     'none') setiap ganti tab. Supaya grid di bawah ini aktif menimpa
+     inline "display:block" tetap perlu !important — TAPI kalau selector-nya
+     cuma "#viewKeuangan" polos, aturan !important itu juga menimpa inline
+     "display:none" saat tab sedang tidak aktif, sehingga KEDUA tab
+     (Keuangan & Surat) selalu tampil sekaligus, bertumpuk ke bawah. Untuk
+     role selain sekretaris, form surat disembunyikan (suratFormCard
+     display:none), jadi bagian yang "nimbrung" itu terlihat sebagai area
+     kosong yang panjang — inilah sumber "blank layar, perlu scroll ke
+     menu" yang dilaporkan. Makanya di sini !important hanya diberi
+     SELAMA elemen itu TIDAK sedang di-set display:none oleh JS
+     (dicek lewat :not([style*=...])), sehingga tab yang nonaktif betul-betul
+     hilang dari layar seperti maksud switchTab().
      Kedua kolom sengaja dibatasi lebarnya (bukan 1fr) supaya form
      transaksi tidak melar mengikuti sisa lebar layar; sisa ruang di
      kanan/kiri dipusatkan lewat justify-content:center. */
-  #viewKeuangan {
+  #viewKeuangan:not([style*="display:none"]):not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: minmax(0, 400px) minmax(0, 400px);
     justify-content: center;
@@ -147,10 +158,10 @@
   #suratArchiveList .letter-row { margin-bottom: 0; }
 
   /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
-  /* Sama seperti #viewKeuangan: switchTab() menyetel inline
-     viewSurat.style.display = 'block'/'none', jadi butuh !important.
-     Lebar kedua kolom dibuat senada dengan #viewKeuangan. */
-  #viewSurat {
+  /* Sama seperti #viewKeuangan di atas: grid hanya dipaksa aktif kalau
+     elemen ini TIDAK sedang display:none (lihat penjelasan panjang di
+     atas). Lebar kedua kolom dibuat senada dengan #viewKeuangan. */
+  #viewSurat:not([style*="display:none"]):not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: minmax(0, 400px) minmax(0, 400px);
     justify-content: center;
