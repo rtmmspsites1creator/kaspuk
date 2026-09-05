@@ -24,16 +24,29 @@
     min-height: 100vh;
   }
 
-  #appRoot > header,
-  #appRoot > .wrap,
-  #appRoot > .bottom-bar {
+  /* PENTING (penyebab bug "area putih kosong panjang di atas"):
+     responsive-enhance.js membungkus header + .wrap + .bottom-bar ke
+     dalam SATU wrapper (#rkContent) di kolom kanan. Ini disengaja —
+     kalau ketiganya dibiarkan jadi 3 grid-item terpisah langsung di
+     bawah #appRoot, grid otomatis membuat 3 baris implisit, dan
+     #rkSidebar (yang tingginya 100vh) ikut menyumbang tinggi ke SEMUA
+     baris itu lewat algoritma sizing grid untuk item yang melintasi
+     banyak baris (grid-row span) — walau sidebar terlihat cuma
+     setinggi layar, baris pertama (tempat header) bisa terpaksa jauh
+     lebih tinggi dari kontennya sendiri, jadi terlihat sebagai area
+     kosong panjang sebelum form/menu transaksi muncul.
+     Dengan satu wrapper ini, kolom kanan hanya 1 baris → sidebar tidak
+     lagi span banyak baris → bug hilang. Jangan hapus wrapper ini atau
+     kembalikan header/.wrap/.bottom-bar jadi grid-item terpisah. */
+  #rkContent {
     grid-column: 2;
+    min-width: 0;
   }
 
   /* Sidebar dibuat oleh responsive-enhance.js */
   #rkSidebar {
     grid-column: 1;
-    grid-row: 1 / -1;
+    grid-row: 1;
     position: sticky;
     top: 0;
     height: 100vh;
