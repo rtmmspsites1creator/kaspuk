@@ -1,7 +1,7 @@
 /* =========================================================
    RekapKas — Responsive Enhancer
    Memindahkan elemen brand, navigasi tab, dan info user/logout
-   ke sidebar kiri saat layar >= 960px, tanpa mengubah
+   ke sidebar kiri saat layar >= 1024px, tanpa mengubah
    event listener yang sudah dipasang di elemen aslinya
    (elemen DIPINDAH, bukan digandakan, jadi semua fungsi
    klik / auth / logout tetap bekerja seperti biasa).
@@ -12,7 +12,7 @@
 (function () {
   "use strict";
 
-  const BREAKPOINT = "(min-width: 960px)";
+  const BREAKPOINT = "(min-width: 1024px)";
   const mq = window.matchMedia(BREAKPOINT);
 
   let sidebarEl = null;
