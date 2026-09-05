@@ -162,10 +162,10 @@
     grid-column: 1 / -1;
   }
 
-  /* Daftar (transaksi disetujui, transaksi pending, surat pending, arsip
-     surat) dipetakan jadi grid multi-kolom otomatis supaya baris tidak
-     melebar penuh dengan celah kosong raksasa di tengahnya. */
-  #txList,
+  /* Daftar transaksi pending & arsip surat tetap grid multi-kolom otomatis
+     supaya baris tidak melebar penuh dengan celah kosong raksasa di
+     tengahnya. Riwayat Transaksi (#txList) sengaja DIKECUALIKAN dan
+     dibuat 1 kolom penuh (lihat aturan #txList terpisah di bawah). */
   #pendingList,
   #suratPendingList,
   #suratArchiveList {
@@ -173,10 +173,17 @@
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 10px;
   }
-  #txList .tx-row,
   #pendingList .tx-row,
   #suratPendingList .letter-row,
   #suratArchiveList .letter-row { margin-bottom: 0; }
+
+  /* Riwayat Transaksi: 1 kolom penuh, berurutan vertikal ke bawah */
+  #txList {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  #txList .tx-row { margin-bottom: 0; }
 
   /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
   /* Sama seperti #viewKeuangan di atas: grid hanya dipaksa aktif kalau
