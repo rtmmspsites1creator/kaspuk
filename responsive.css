@@ -13,50 +13,58 @@
 @media (min-width: 1024px) {
 
   /* ---------- Kerangka utama: sidebar + konten ---------- */
-  /* Catatan: script utama aplikasi menyetel appRoot.style.display = 'block'
-     langsung sebagai inline style saat login berhasil. Inline style selalu
-     menang melawan aturan CSS biasa dari file eksternal, jadi baris
-     "display" di bawah ini WAJIB pakai !important supaya grid-nya aktif. */
+  /* PERBAIKAN (murni CSS, tidak bergantung pada #rkContent dari JS):
+     Sebelumnya kerangka ini pakai CSS Grid dengan #rkSidebar setinggi
+     100vh yang di-span sebagai grid-row. Walau responsive-enhance.js
+     membungkus header/.wrap/.bottom-bar ke #rkContent supaya cuma ada
+     1 baris grid, itu jadi TITIK RAWAN: kalau JS-nya belum sempat
+     jalan (race condition saat load, cache lama, dsb), header/.wrap/
+     .bottom-bar kembali jadi 3 grid-item terpisah dan bug lama
+     (baris pertama dipaksa melar setinggi sidebar) muncul lagi.
+     Sekarang kerangkanya diganti jadi TIDAK PAKAI GRID SAMA SEKALI:
+     - #rkSidebar dilepas dari alur dokumen dengan position:fixed,
+       jadi dia sama sekali tidak ikut proses "sizing" tata letak
+       konten di sebelahnya — tidak peduli header/.wrap/.bottom-bar
+       ada di dalam #rkContent atau langsung di bawah #appRoot.
+     - #appRoot cukup diberi padding-left selebar sidebar supaya semua
+       kontennya (apa pun strukturnya) otomatis bergeser ke kanan,
+       menyisakan ruang untuk sidebar yang fixed di kiri.
+     Catatan: script utama aplikasi menyetel appRoot.style.display =
+     'block' langsung sebagai inline style saat login berhasil. Inline
+     style selalu menang melawan CSS biasa dari file eksternal, jadi
+     baris "display" & "padding-left" di bawah WAJIB !important supaya
+     tetap aktif. */
   #appRoot {
-    display: grid !important;
-    grid-template-columns: 250px minmax(0, 1fr);
-    align-items: start;
+    display: block !important;
+    padding-left: 250px !important;
     min-height: 100vh;
+    box-sizing: border-box;
   }
 
-  /* PENTING (penyebab bug "area putih kosong panjang di atas"):
-     responsive-enhance.js membungkus header + .wrap + .bottom-bar ke
-     dalam SATU wrapper (#rkContent) di kolom kanan. Ini disengaja —
-     kalau ketiganya dibiarkan jadi 3 grid-item terpisah langsung di
-     bawah #appRoot, grid otomatis membuat 3 baris implisit, dan
-     #rkSidebar (yang tingginya 100vh) ikut menyumbang tinggi ke SEMUA
-     baris itu lewat algoritma sizing grid untuk item yang melintasi
-     banyak baris (grid-row span) — walau sidebar terlihat cuma
-     setinggi layar, baris pertama (tempat header) bisa terpaksa jauh
-     lebih tinggi dari kontennya sendiri, jadi terlihat sebagai area
-     kosong panjang sebelum form/menu transaksi muncul.
-     Dengan satu wrapper ini, kolom kanan hanya 1 baris → sidebar tidak
-     lagi span banyak baris → bug hilang. Jangan hapus wrapper ini atau
-     kembalikan header/.wrap/.bottom-bar jadi grid-item terpisah. */
-  #rkContent {
-    grid-column: 2;
-    min-width: 0;
-  }
-
-  /* Sidebar dibuat oleh responsive-enhance.js */
+  /* Sidebar dibuat oleh responsive-enhance.js. position:fixed membuatnya
+     lepas total dari alur/"sizing" #appRoot — tidak ada lagi
+     ketergantungan pada grid-row/#rkContent supaya layout tetap benar. */
   #rkSidebar {
-    grid-column: 1;
-    grid-row: 1;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    width: 250px;
     height: 100vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     background: var(--surface);
     border-right: 1px solid var(--border);
     padding: 20px 16px;
     box-sizing: border-box;
+    z-index: 20;
   }
+
+  /* Kalau JS gagal membuat #rkContent (mis. race condition di atas),
+     header/.wrap/.bottom-bar tetap jadi anak langsung #appRoot dan
+     tetap rapat ke atas seperti biasa — padding-left #appRoot di atas
+     sudah cukup, tidak perlu aturan tambahan apa pun di sini. */
+  #rkContent { min-width: 0; }
 
   #rkSidebar .brand { padding: 4px 8px 20px; }
   #rkSidebar .brand-mark { width: 40px; height: 40px; }
