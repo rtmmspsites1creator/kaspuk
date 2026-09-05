@@ -1,12 +1,16 @@
 /* =========================================================
    RekapKas — Responsive Layer
-   Tidak mengubah tampilan mobile sama sekali (< 960px).
-   Di layar ≥ 960px, dipasangkan dengan responsive-enhance.js
-   yang memindahkan brand, navigasi tab, dan info user ke
-   sidebar kiri, lalu menata konten jadi grid dua kolom.
+   Tidak mengubah tampilan mobile sama sekali (< 1024px):
+   tetap satu kolom vertikal dengan navigasi di bottom bar.
+
+   Di layar >= 1024px, dipasangkan dengan responsive-enhance.js
+   yang memindahkan brand, navigasi tab, dan info user/logout ke
+   sidebar kiri, lalu menata konten Keuangan & Surat jadi dua
+   kolom yang lebarnya dibatasi (tidak melar mengikuti lebar
+   layar) supaya form dan kartu tetap enak dibaca di desktop.
    ========================================================= */
 
-@media (min-width: 960px) {
+@media (min-width: 1024px) {
 
   /* ---------- Kerangka utama: sidebar + konten ---------- */
   /* Catatan: script utama aplikasi menyetel appRoot.style.display = 'block'
@@ -41,9 +45,7 @@
     box-sizing: border-box;
   }
 
-  #rkSidebar .brand {
-    padding: 4px 8px 20px;
-  }
+  #rkSidebar .brand { padding: 4px 8px 20px; }
   #rkSidebar .brand-mark { width: 40px; height: 40px; }
   #rkSidebar .brand-name { font-size: 19px; }
 
@@ -104,14 +106,18 @@
     box-sizing: border-box;
   }
 
-  /* ---------- Dashboard Keuangan: grid 2 kolom ---------- */
+  /* ---------- Dashboard Keuangan: dua kolom dengan lebar terbatas ---------- */
   /* Catatan: switchTab() di script utama menyetel
      viewKeuangan.style.display = 'block'/'none' langsung sebagai inline
      style setiap ganti tab. Sama seperti kasus #appRoot, ini WAJIB pakai
-     !important supaya grid 2 kolom di bawah ini benar-benar aktif. */
+     !important supaya grid di bawah ini benar-benar aktif.
+     Kedua kolom sengaja dibatasi lebarnya (bukan 1fr) supaya form
+     transaksi tidak melar mengikuti sisa lebar layar; sisa ruang di
+     kanan/kiri dipusatkan lewat justify-content:center. */
   #viewKeuangan {
     display: grid !important;
-    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 400px) minmax(0, 400px);
+    justify-content: center;
     gap: 24px;
     align-items: start;
   }
@@ -124,20 +130,30 @@
     grid-column: 1 / -1;
   }
 
-  /* Daftar transaksi jadi 2 kolom biar tidak terlalu memanjang ke bawah */
-  #txList {
+  /* Daftar (transaksi disetujui, transaksi pending, surat pending, arsip
+     surat) dipetakan jadi grid multi-kolom otomatis supaya baris tidak
+     melebar penuh dengan celah kosong raksasa di tengahnya. */
+  #txList,
+  #pendingList,
+  #suratPendingList,
+  #suratArchiveList {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 10px;
   }
-  #txList .tx-row { margin-bottom: 0; }
+  #txList .tx-row,
+  #pendingList .tx-row,
+  #suratPendingList .letter-row,
+  #suratArchiveList .letter-row { margin-bottom: 0; }
 
   /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
   /* Sama seperti #viewKeuangan: switchTab() menyetel inline
-     viewSurat.style.display = 'block'/'none', jadi butuh !important. */
+     viewSurat.style.display = 'block'/'none', jadi butuh !important.
+     Lebar kedua kolom dibuat senada dengan #viewKeuangan. */
   #viewSurat {
     display: grid !important;
-    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 400px) minmax(0, 400px);
+    justify-content: center;
     gap: 24px;
     align-items: start;
   }
@@ -154,7 +170,8 @@
     grid-column: 2;
   }
   /* Kalau sekretaris tidak melihat form (form disembunyikan JS),
-     arsip otomatis full width karena grid-column tetap 2 tapi kolom 1 kosong */
+     arsip tetap di kolom 2, kolom 1 kosong dan grid tetap seimbang
+     karena justify-content:center memusatkan sisa ruang. */
 
   /* ---------- Footer / bottom bar: dari fixed jadi bagian alur biasa ---------- */
   .bottom-bar {
@@ -186,6 +203,6 @@
   .wrap { max-width: 1280px; }
   header .header-inner { max-width: 1280px; }
   .bottom-bar-inner { max-width: 1280px; margin: 0 auto; }
-  #viewKeuangan { grid-template-columns: 420px minmax(0, 1fr); }
-  #viewSurat { grid-template-columns: 460px minmax(0, 1fr); }
+  #viewKeuangan { grid-template-columns: minmax(0, 440px) minmax(0, 440px); }
+  #viewSurat { grid-template-columns: minmax(0, 420px) minmax(0, 460px); }
 }
