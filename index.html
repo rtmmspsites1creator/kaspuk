@@ -1726,13 +1726,14 @@
     showToast('Laporan PDF sedang diunduh');
   });
 
-  /* ================= EXPORT XLSX (RAPI PER BULAN, SELURUH PERIODE) ================= */
+  /* ================= EXPORT XLSX (SATU SHEET, RAPI SEPERTI PDF) ================= */
   // Beda dengan tombol PDF di atas (yang cuma mencetak 1 bulan sedang aktif),
   // tombol ini membuat 1 file Excel berisi:
   //  - sheet "Ringkasan": rekap tiap bulan berdampingan (seluruh periode)
-  //  - 1 sheet per bulan, tata letaknya meniru tabel laporan PDF (judul,
-  //    saldo awal, tabel header biru, warna pemasukan/pengeluaran, baris
-  //    TOTAL, saldo akhir) supaya tetap rapi walau semua periode disertakan.
+  //  - sheet "Rekap Bulanan": SEMUA bulan digabung jadi SATU sheet, tersusun
+  //    ke bawah berurutan (tinggal scroll naik-turun), tiap blok bulan
+  //    meniru tata letak tabel laporan PDF (judul, saldo awal, tabel header
+  //    biru, warna pemasukan/pengeluaran, baris TOTAL, saldo akhir).
   const XLSX_COLORS = { blue: '1D63B4', red: 'DC2626', grayFill: 'EEF2F7', white: 'FFFFFF', border: 'CBD5E1' };
 
   function xlsxBorderAll(){
@@ -1749,8 +1750,11 @@
     ws[addr].s = Object.assign({}, ws[addr].s, style);
   }
 
-  // Membuat 1 sheet laporan untuk 1 bulan, meniru tata letak "Cetak Laporan PDF".
-  function buildMonthSheet(monthKey){
+  // Menyusun baris untuk 1 bulan (meniru tata letak "Cetak Laporan PDF"),
+  // TAPI tidak langsung dijadikan sheet — cuma dikembalikan sebagai baris
+  // mentah + daftar style/merge yang masih relatif (dimulai dari baris 0),
+  // supaya bisa "ditempel" ke sheet gabungan pada baris berapa pun nanti.
+  function buildMonthBlock(monthKey){
     const list = Object.values(db[monthKey] || {})
       .filter(t=>t.status === 'approved')
       .sort((a,b)=> a.date.localeCompare(b.date));
@@ -1759,55 +1763,56 @@
     const opening = getOpeningBalance(monthKey);
     const closing = opening + totalIn - totalOut;
 
-    const aoa = [];
-    aoa.push(['KEUANGAN PUK FSP RTMM SPSI PT. TORABIKA EKA SEMESTA 2023-2026', '', '', '', '']);
-    aoa.push(['DATA KELUAR MASUK SPSI UNTUK BERBAGAI KEGIATAN', '', '', '', '']);
-    aoa.push(['BULAN ' + monthLabel(monthKey).toUpperCase(), '', '', '', '']);
-    aoa.push([]);
-    aoa.push(['Saldo Awal Bulan Ini', '', '', '', opening]);
-    aoa.push([]);
-    const headerRowIdx = aoa.length;
-    aoa.push(['Tanggal', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)']);
+    const rows = [];
+    const ops = []; // { r, c, style } — r masih relatif terhadap awal blok ini
+    const merges = []; // { s:{r,c}, e:{r,c} } — juga masih relatif
+
+    rows.push(['KEUANGAN PUK FSP RTMM SPSI PT. TORABIKA EKA SEMESTA 2023-2026', '', '', '', '']);
+    rows.push(['DATA KELUAR MASUK SPSI UNTUK BERBAGAI KEGIATAN', '', '', '', '']);
+    rows.push(['BULAN ' + monthLabel(monthKey).toUpperCase(), '', '', '', '']);
+    rows.push([]);
+    rows.push(['Saldo Awal Bulan Ini', '', '', '', opening]);
+    rows.push([]);
+    const headerRowIdx = rows.length;
+    rows.push(['Tanggal', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)']);
 
     let running = opening;
-    const dataStartIdx = aoa.length;
+    const dataStartIdx = rows.length;
     list.forEach(t=>{
       running += (t.type === 'in' ? t.amount : -t.amount);
-      aoa.push([ fmtTgl(t.date), t.desc, t.type === 'in' ? t.amount : '', t.type === 'out' ? t.amount : '', running ]);
+      rows.push([ fmtTgl(t.date), t.desc, t.type === 'in' ? t.amount : '', t.type === 'out' ? t.amount : '', running ]);
     });
-    const dataEndIdx = aoa.length - 1;
+    const dataEndIdx = rows.length - 1;
 
-    const totalRowIdx = aoa.length;
-    aoa.push(['', 'TOTAL', totalIn, totalOut, closing]);
-    aoa.push([]);
-    const closingRowIdx = aoa.length;
-    aoa.push(['Saldo Akhir Bulan Ini', '', '', '', closing]);
+    const totalRowIdx = rows.length;
+    rows.push(['', 'TOTAL', totalIn, totalOut, closing]);
+    rows.push([]);
+    const closingRowIdx = rows.length;
+    rows.push(['Saldo Akhir Bulan Ini', '', '', '', closing]);
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [ { wch: 14 }, { wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 } ];
-    ws['!merges'] = [
+    merges.push(
       { s:{r:0,c:0}, e:{r:0,c:4} },
       { s:{r:1,c:0}, e:{r:1,c:4} },
       { s:{r:2,c:0}, e:{r:2,c:4} },
       { s:{r:4,c:0}, e:{r:4,c:3} },
       { s:{r:closingRowIdx,c:0}, e:{r:closingRowIdx,c:3} }
-    ];
+    );
 
-    xlsxStyleCell(ws, 0, 0, { font:{ bold:true, sz:12 }, alignment:{ horizontal:'center' } });
-    xlsxStyleCell(ws, 1, 0, { font:{ bold:true, sz:10.5 }, alignment:{ horizontal:'center' } });
-    xlsxStyleCell(ws, 2, 0, { font:{ sz:10.5 }, alignment:{ horizontal:'center' } });
-    xlsxStyleCell(ws, 4, 0, { font:{ bold:true } });
-    xlsxStyleCell(ws, 4, 4, { font:{ bold:true }, numFmt:'#,##0', alignment:{ horizontal:'right' } });
-    xlsxStyleCell(ws, closingRowIdx, 0, { font:{ bold:true, sz:12 } });
-    xlsxStyleCell(ws, closingRowIdx, 4, { font:{ bold:true, sz:12 }, numFmt:'#,##0', alignment:{ horizontal:'right' } });
+    ops.push({ r:0, c:0, style:{ font:{ bold:true, sz:12 }, alignment:{ horizontal:'center' } } });
+    ops.push({ r:1, c:0, style:{ font:{ bold:true, sz:10.5 }, alignment:{ horizontal:'center' } } });
+    ops.push({ r:2, c:0, style:{ font:{ sz:10.5 }, alignment:{ horizontal:'center' } } });
+    ops.push({ r:4, c:0, style:{ font:{ bold:true } } });
+    ops.push({ r:4, c:4, style:{ font:{ bold:true }, numFmt:'#,##0', alignment:{ horizontal:'right' } } });
+    ops.push({ r:closingRowIdx, c:0, style:{ font:{ bold:true, sz:12 } } });
+    ops.push({ r:closingRowIdx, c:4, style:{ font:{ bold:true, sz:12 }, numFmt:'#,##0', alignment:{ horizontal:'right' } } });
 
     for(let c=0; c<5; c++){
-      xlsxStyleCell(ws, headerRowIdx, c, {
+      ops.push({ r: headerRowIdx, c, style:{
         font:{ bold:true, color:{ rgb: XLSX_COLORS.white } },
         fill:{ fgColor:{ rgb: XLSX_COLORS.blue } },
         alignment:{ horizontal:'center' },
         border: xlsxBorderAll()
-      });
+      }});
     }
 
     for(let r=dataStartIdx; r<=dataEndIdx; r++){
@@ -1816,17 +1821,17 @@
         if(c===2){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ color:{ rgb: XLSX_COLORS.blue } }; }
         if(c===3){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ color:{ rgb: XLSX_COLORS.red } }; }
         if(c===4){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ bold:true }; }
-        xlsxStyleCell(ws, r, c, style);
+        ops.push({ r, c, style });
       }
     }
 
     for(let c=0; c<5; c++){
       const style = { font:{ bold:true }, fill:{ fgColor:{ rgb: XLSX_COLORS.grayFill } }, border: xlsxBorderAll() };
       if(c>=2){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; }
-      xlsxStyleCell(ws, totalRowIdx, c, style);
+      ops.push({ r: totalRowIdx, c, style });
     }
 
-    return ws;
+    return { rows, ops, merges };
   }
 
   exportXlsxBtn.addEventListener('click', ()=>{
@@ -1890,13 +1895,26 @@
     }
     XLSX.utils.book_append_sheet(wb, ringkasanWs, 'Ringkasan');
 
-    // ---- 1 sheet per bulan, format sama seperti "Cetak Laporan PDF" ----
-    allMonthKeys.forEach(mk=>{
-      const ws = buildMonthSheet(mk);
-      // Nama sheet Excel maksimal 31 karakter & tidak boleh pakai : \ / ? * [ ]
-      const sheetName = monthLabel(mk).replace(/[:\\/\?\*\[\]]/g, '').slice(0, 31);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    // ---- Sheet "Rekap Bulanan": semua bulan digabung jadi SATU sheet ----
+    // Tiap blok bulan ditempel berurutan ke bawah, dipisah 2 baris kosong,
+    // supaya tinggal scroll naik-turun tanpa pindah-pindah sheet.
+    const combinedRows = [];
+    const combinedMerges = [];
+    const combinedOps = [];
+    allMonthKeys.forEach((mk, idx)=>{
+      if(idx > 0){ combinedRows.push([]); combinedRows.push([]); }
+      const startRow = combinedRows.length;
+      const block = buildMonthBlock(mk);
+      block.rows.forEach(row => combinedRows.push(row));
+      block.merges.forEach(m => combinedMerges.push({ s:{ r:m.s.r+startRow, c:m.s.c }, e:{ r:m.e.r+startRow, c:m.e.c } }));
+      block.ops.forEach(op => combinedOps.push({ r: op.r+startRow, c: op.c, style: op.style }));
     });
+
+    const bulananWs = XLSX.utils.aoa_to_sheet(combinedRows);
+    bulananWs['!cols'] = [ { wch: 14 }, { wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 } ];
+    bulananWs['!merges'] = combinedMerges;
+    combinedOps.forEach(op => xlsxStyleCell(bulananWs, op.r, op.c, op.style));
+    XLSX.utils.book_append_sheet(wb, bulananWs, 'Rekap Bulanan');
 
     const firstMonth = allMonthKeys[0];
     const lastMonth = allMonthKeys[allMonthKeys.length - 1];
