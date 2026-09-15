@@ -120,10 +120,12 @@
   header .role-bar { display: none; } /* sudah dipindah ke sidebar */
 
   /* ---------- Lebar konten & padding ---------- */
+  /* padding-bottom dilebihkan supaya baris transaksi paling bawah tidak
+     tertutup panel ekspor yang mengambang (lihat .bottom-bar di bawah). */
   .wrap {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 32px 40px;
+    padding: 0 32px 140px;
     box-sizing: border-box;
   }
 
@@ -212,21 +214,38 @@
      arsip tetap di kolom 2, kolom 1 kosong dan grid tetap seimbang
      karena justify-content:center memusatkan sisa ruang. */
 
-  /* ---------- Footer / bottom bar: dari fixed jadi bagian alur biasa ---------- */
+  /* ---------- Tombol ekspor: panel mengambang, selalu terjangkau ---------- */
+  /* Sebelumnya .bottom-bar dijadikan position:static (ikut alur halaman
+     biasa), tapi itu bikin tombol ekspor jatuh ke paling bawah — kalau
+     transaksi banyak, harus discroll jauh untuk menjangkaunya. Sekarang
+     dibuat position:fixed lagi (mengambang) tapi ditempel di pojok
+     kanan-bawah viewport (bukan full-width seperti versi mobile), supaya
+     selalu terlihat & bisa diklik dari posisi scroll mana pun, dan tidak
+     menutupi sidebar di kiri. */
   .bottom-bar {
-    position: static;
-    background: transparent;
+    position: fixed;
+    left: auto;
+    right: 32px;
+    bottom: 24px;
+    width: 230px;
+    background: var(--surface);
     backdrop-filter: none;
-    border-top: none;
-    padding: 24px 32px 0;
+    border: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+    padding: 14px;
+    z-index: 15;
   }
-  .bottom-bar-inner { max-width: 1100px; margin: 0 auto; }
-  #exportBtn { width: auto; padding: 12px 22px; }
+  .bottom-bar-inner { max-width: none; margin: 0; }
+  .bottom-bar-actions { gap: 8px; }
+  #exportBtn, #exportXlsxBtn { width: 100%; padding: 11px 10px; font-size: 13px; }
 
-  /* body tidak perlu padding-bottom ekstra lagi karena bottom-bar tak lagi fixed */
-  /* switchTab() juga menyetel body.style.paddingBottom = '100px' inline
-     saat tab Keuangan aktif (disiapkan untuk bottom-bar fixed di mobile).
-     Di desktop bottom-bar sudah tidak fixed lagi, jadi paksa 0. */
+  /* body tidak perlu padding-bottom ekstra lagi di desktop; ruang aman di
+     bawah daftar transaksi sudah ditangani lewat padding .wrap di atas. */
+  /* switchTab() menyetel body.style.paddingBottom = '100px' inline saat
+     tab Keuangan aktif (disiapkan untuk bottom-bar fixed penuh di mobile).
+     Paksa 0 di desktop supaya tidak ada spasi ekstra yang tidak perlu. */
   body { padding-bottom: 0 !important; }
 
   /* ---------- Rapikan lebar form 2 kolom kecil ---------- */
@@ -241,7 +260,6 @@
 @media (min-width: 1440px) {
   .wrap { max-width: 1280px; }
   header .header-inner { max-width: 1280px; }
-  .bottom-bar-inner { max-width: 1280px; margin: 0 auto; }
   #viewKeuangan { grid-template-columns: minmax(0, 440px) minmax(0, 440px); }
   #viewSurat { grid-template-columns: minmax(0, 420px) minmax(0, 460px); }
 }
