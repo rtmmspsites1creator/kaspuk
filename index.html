@@ -18,7 +18,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -1726,66 +1726,180 @@
     showToast('Laporan PDF sedang diunduh');
   });
 
-  /* ================= EXPORT XLSX (SELURUH PERIODE) ================= */
+  /* ================= EXPORT XLSX (RAPI PER BULAN, SELURUH PERIODE) ================= */
   // Beda dengan tombol PDF di atas (yang cuma mencetak 1 bulan sedang aktif),
-  // tombol ini merekap SEMUA transaksi yang sudah disetujui dari bulan
-  // paling awal tercatat sampai bulan paling akhir di database (bukan cuma
-  // currentMonth), diurutkan kronologis dengan saldo berjalan.
+  // tombol ini membuat 1 file Excel berisi:
+  //  - sheet "Ringkasan": rekap tiap bulan berdampingan (seluruh periode)
+  //  - 1 sheet per bulan, tata letaknya meniru tabel laporan PDF (judul,
+  //    saldo awal, tabel header biru, warna pemasukan/pengeluaran, baris
+  //    TOTAL, saldo akhir) supaya tetap rapi walau semua periode disertakan.
+  const XLSX_COLORS = { blue: '1D63B4', red: 'DC2626', grayFill: 'EEF2F7', white: 'FFFFFF', border: 'CBD5E1' };
+
+  function xlsxBorderAll(){
+    const line = { style: 'thin', color: { rgb: XLSX_COLORS.border } };
+    return { top: line, bottom: line, left: line, right: line };
+  }
+
+  // Menerapkan style ke satu sel. Selnya dibuat dulu kalau belum ada isinya,
+  // supaya sel kosong (mis. kolom kosong di baris judul/total) tetap bisa
+  // diberi warna/border seperti tabel di PDF.
+  function xlsxStyleCell(ws, r, c, style){
+    const addr = XLSX.utils.encode_cell({ r, c });
+    if(!ws[addr]) ws[addr] = { t: 'z' };
+    ws[addr].s = Object.assign({}, ws[addr].s, style);
+  }
+
+  // Membuat 1 sheet laporan untuk 1 bulan, meniru tata letak "Cetak Laporan PDF".
+  function buildMonthSheet(monthKey){
+    const list = Object.values(db[monthKey] || {})
+      .filter(t=>t.status === 'approved')
+      .sort((a,b)=> a.date.localeCompare(b.date));
+    const totalIn = list.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+    const totalOut = list.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+    const opening = getOpeningBalance(monthKey);
+    const closing = opening + totalIn - totalOut;
+
+    const aoa = [];
+    aoa.push(['KEUANGAN PUK FSP RTMM SPSI PT. TORABIKA EKA SEMESTA 2023-2026', '', '', '', '']);
+    aoa.push(['DATA KELUAR MASUK SPSI UNTUK BERBAGAI KEGIATAN', '', '', '', '']);
+    aoa.push(['BULAN ' + monthLabel(monthKey).toUpperCase(), '', '', '', '']);
+    aoa.push([]);
+    aoa.push(['Saldo Awal Bulan Ini', '', '', '', opening]);
+    aoa.push([]);
+    const headerRowIdx = aoa.length;
+    aoa.push(['Tanggal', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)']);
+
+    let running = opening;
+    const dataStartIdx = aoa.length;
+    list.forEach(t=>{
+      running += (t.type === 'in' ? t.amount : -t.amount);
+      aoa.push([ fmtTgl(t.date), t.desc, t.type === 'in' ? t.amount : '', t.type === 'out' ? t.amount : '', running ]);
+    });
+    const dataEndIdx = aoa.length - 1;
+
+    const totalRowIdx = aoa.length;
+    aoa.push(['', 'TOTAL', totalIn, totalOut, closing]);
+    aoa.push([]);
+    const closingRowIdx = aoa.length;
+    aoa.push(['Saldo Akhir Bulan Ini', '', '', '', closing]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [ { wch: 14 }, { wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 } ];
+    ws['!merges'] = [
+      { s:{r:0,c:0}, e:{r:0,c:4} },
+      { s:{r:1,c:0}, e:{r:1,c:4} },
+      { s:{r:2,c:0}, e:{r:2,c:4} },
+      { s:{r:4,c:0}, e:{r:4,c:3} },
+      { s:{r:closingRowIdx,c:0}, e:{r:closingRowIdx,c:3} }
+    ];
+
+    xlsxStyleCell(ws, 0, 0, { font:{ bold:true, sz:12 }, alignment:{ horizontal:'center' } });
+    xlsxStyleCell(ws, 1, 0, { font:{ bold:true, sz:10.5 }, alignment:{ horizontal:'center' } });
+    xlsxStyleCell(ws, 2, 0, { font:{ sz:10.5 }, alignment:{ horizontal:'center' } });
+    xlsxStyleCell(ws, 4, 0, { font:{ bold:true } });
+    xlsxStyleCell(ws, 4, 4, { font:{ bold:true }, numFmt:'#,##0', alignment:{ horizontal:'right' } });
+    xlsxStyleCell(ws, closingRowIdx, 0, { font:{ bold:true, sz:12 } });
+    xlsxStyleCell(ws, closingRowIdx, 4, { font:{ bold:true, sz:12 }, numFmt:'#,##0', alignment:{ horizontal:'right' } });
+
+    for(let c=0; c<5; c++){
+      xlsxStyleCell(ws, headerRowIdx, c, {
+        font:{ bold:true, color:{ rgb: XLSX_COLORS.white } },
+        fill:{ fgColor:{ rgb: XLSX_COLORS.blue } },
+        alignment:{ horizontal:'center' },
+        border: xlsxBorderAll()
+      });
+    }
+
+    for(let r=dataStartIdx; r<=dataEndIdx; r++){
+      for(let c=0; c<5; c++){
+        const style = { border: xlsxBorderAll() };
+        if(c===2){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ color:{ rgb: XLSX_COLORS.blue } }; }
+        if(c===3){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ color:{ rgb: XLSX_COLORS.red } }; }
+        if(c===4){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; style.font={ bold:true }; }
+        xlsxStyleCell(ws, r, c, style);
+      }
+    }
+
+    for(let c=0; c<5; c++){
+      const style = { font:{ bold:true }, fill:{ fgColor:{ rgb: XLSX_COLORS.grayFill } }, border: xlsxBorderAll() };
+      if(c>=2){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; }
+      xlsxStyleCell(ws, totalRowIdx, c, style);
+    }
+
+    return ws;
+  }
+
   exportXlsxBtn.addEventListener('click', ()=>{
     if(typeof XLSX === 'undefined'){
       showToast('Gagal memuat pustaka XLSX, cek koneksi internet');
       return;
     }
 
-    const rows = [];
-    Object.keys(db).forEach(monthKey=>{
-      const monthObj = db[monthKey] || {};
-      Object.values(monthObj).forEach(t=>{
-        if(t.status !== 'approved') return;
-        rows.push({ monthKey, date: t.date, desc: t.desc, type: t.type, amount: t.amount, by: t.createdByName || '-' });
-      });
-    });
-
-    if(rows.length === 0){ showToast('Belum ada transaksi disetujui untuk diekspor'); return; }
-
-    // Urutkan kronologis: tanggal transaksi asli dulu, baru bulan pencatatan
-    // sebagai penentu kalau ada 2 transaksi bertanggal sama.
-    rows.sort((a,b)=> a.date.localeCompare(b.date) || a.monthKey.localeCompare(b.monthKey));
-
-    const sheetData = [
-      ['No', 'Tanggal', 'Bulan Pencatatan', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)', 'Dicatat Oleh']
-    ];
-
-    let saldo = 0;
-    rows.forEach((t, i)=>{
-      saldo += (t.type === 'in' ? t.amount : -t.amount);
-      sheetData.push([
-        i + 1,
-        fmtTgl(t.date),
-        monthLabel(t.monthKey),
-        t.desc,
-        t.type === 'in' ? t.amount : '',
-        t.type === 'out' ? t.amount : '',
-        saldo,
-        t.by
-      ]);
-    });
-
-    const totalIn = rows.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
-    const totalOut = rows.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
-    sheetData.push(['', '', '', 'TOTAL KESELURUHAN', totalIn, totalOut, saldo, '']);
-
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    ws['!cols'] = [
-      { wch: 5 }, { wch: 20 }, { wch: 16 }, { wch: 42 },
-      { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 22 }
-    ];
+    const allMonthKeys = Object.keys(db)
+      .filter(mk => Object.values(db[mk] || {}).some(t=>t.status === 'approved'))
+      .sort();
+    if(allMonthKeys.length === 0){ showToast('Belum ada transaksi disetujui untuk diekspor'); return; }
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Keuangan');
 
-    const firstMonth = rows[0].monthKey;
-    const lastMonth = rows[rows.length - 1].monthKey;
+    // ---- Sheet "Ringkasan": rekap tiap bulan berdampingan, 1 baris/bulan ----
+    const ringkasanAoa = [
+      ['REKAP KEUANGAN SELURUH PERIODE', '', '', '', ''],
+      [],
+      ['Bulan', 'Saldo Awal (Rp)', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo Akhir (Rp)']
+    ];
+    let grandIn = 0, grandOut = 0, finalSaldo = 0;
+    allMonthKeys.forEach(mk=>{
+      const list = Object.values(db[mk] || {}).filter(t=>t.status === 'approved');
+      const inSum = list.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+      const outSum = list.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+      const opening = getOpeningBalance(mk);
+      const closing = opening + inSum - outSum;
+      grandIn += inSum; grandOut += outSum; finalSaldo = closing;
+      ringkasanAoa.push([ monthLabel(mk), opening, inSum, outSum, closing ]);
+    });
+    const totalRingkasanRowIdx = ringkasanAoa.length;
+    ringkasanAoa.push([ 'TOTAL KESELURUHAN', '', grandIn, grandOut, finalSaldo ]);
+
+    const ringkasanWs = XLSX.utils.aoa_to_sheet(ringkasanAoa);
+    ringkasanWs['!cols'] = [ { wch:18 }, { wch:16 }, { wch:16 }, { wch:16 }, { wch:16 } ];
+    ringkasanWs['!merges'] = [ { s:{r:0,c:0}, e:{r:0,c:4} } ];
+    xlsxStyleCell(ringkasanWs, 0, 0, { font:{ bold:true, sz:13 }, alignment:{ horizontal:'center' } });
+    for(let c=0; c<5; c++){
+      xlsxStyleCell(ringkasanWs, 2, c, {
+        font:{ bold:true, color:{ rgb: XLSX_COLORS.white } },
+        fill:{ fgColor:{ rgb: XLSX_COLORS.blue } },
+        alignment:{ horizontal:'center' },
+        border: xlsxBorderAll()
+      });
+    }
+    for(let r=3; r<totalRingkasanRowIdx; r++){
+      for(let c=0; c<5; c++){
+        const style = { border: xlsxBorderAll() };
+        if(c>=1){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; }
+        if(c===2) style.font = { color:{ rgb: XLSX_COLORS.blue } };
+        if(c===3) style.font = { color:{ rgb: XLSX_COLORS.red } };
+        if(c===4) style.font = { bold:true };
+        xlsxStyleCell(ringkasanWs, r, c, style);
+      }
+    }
+    for(let c=0; c<5; c++){
+      const style = { font:{ bold:true }, fill:{ fgColor:{ rgb: XLSX_COLORS.grayFill } }, border: xlsxBorderAll() };
+      if(c>=2){ style.numFmt='#,##0'; style.alignment={horizontal:'right'}; }
+      xlsxStyleCell(ringkasanWs, totalRingkasanRowIdx, c, style);
+    }
+    XLSX.utils.book_append_sheet(wb, ringkasanWs, 'Ringkasan');
+
+    // ---- 1 sheet per bulan, format sama seperti "Cetak Laporan PDF" ----
+    allMonthKeys.forEach(mk=>{
+      const ws = buildMonthSheet(mk);
+      // Nama sheet Excel maksimal 31 karakter & tidak boleh pakai : \ / ? * [ ]
+      const sheetName = monthLabel(mk).replace(/[:\\/\?\*\[\]]/g, '').slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    const firstMonth = allMonthKeys[0];
+    const lastMonth = allMonthKeys[allMonthKeys.length - 1];
     XLSX.writeFile(wb, `Rekap-Keuangan-Lengkap-${firstMonth}_sd_${lastMonth}.xlsx`);
     showToast('Rekap keseluruhan (XLSX) sedang diunduh');
   });
