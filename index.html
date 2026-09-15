@@ -18,6 +18,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -353,13 +354,15 @@
     padding:10px 16px calc(10px + env(safe-area-inset-bottom));
   }
   .bottom-bar-inner{ max-width:480px; margin:0 auto; }
-  #exportBtn{
+  .bottom-bar-actions{ display:flex; flex-direction:column; gap:8px; }
+  #exportBtn, #exportXlsxBtn{
     width:100%; padding:14px 0; border-radius:12px; border:1px solid var(--border);
     background:var(--surface-2); color:var(--text); font-weight:600; font-size:14px;
     display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
     font-family:var(--font-body);
   }
   #exportBtn svg{ width:17px; height:17px; color:var(--amber); }
+  #exportXlsxBtn svg{ width:17px; height:17px; color:#1a7f37; }
 
   /* ---------- Toast ---------- */
   #toast{
@@ -594,10 +597,16 @@
 
 <div class="bottom-bar" id="bottomBarKeuangan">
   <div class="bottom-bar-inner">
-    <button id="exportBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
-      Cetak Laporan PDF
-    </button>
+    <div class="bottom-bar-actions">
+      <button id="exportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+        Cetak Laporan PDF
+      </button>
+      <button id="exportXlsxBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="19"/><line x1="15" y1="13" x2="9" y2="19"/></svg>
+        Ekspor Semua (XLSX)
+      </button>
+    </div>
   </div>
 </div>
 
@@ -716,6 +725,7 @@
   const micBtn = document.getElementById('micBtn');
   const micStatus = document.getElementById('micStatus');
   const exportBtn = document.getElementById('exportBtn');
+  const exportXlsxBtn = document.getElementById('exportXlsxBtn');
   const toastEl = document.getElementById('toast');
   const txEditBanner = document.getElementById('txEditBanner');
   const txEditCancelBtn = document.getElementById('txEditCancelBtn');
@@ -1714,6 +1724,70 @@
 
     doc.save(`Laporan-Keuangan-${currentMonth}.pdf`);
     showToast('Laporan PDF sedang diunduh');
+  });
+
+  /* ================= EXPORT XLSX (SELURUH PERIODE) ================= */
+  // Beda dengan tombol PDF di atas (yang cuma mencetak 1 bulan sedang aktif),
+  // tombol ini merekap SEMUA transaksi yang sudah disetujui dari bulan
+  // paling awal tercatat sampai bulan paling akhir di database (bukan cuma
+  // currentMonth), diurutkan kronologis dengan saldo berjalan.
+  exportXlsxBtn.addEventListener('click', ()=>{
+    if(typeof XLSX === 'undefined'){
+      showToast('Gagal memuat pustaka XLSX, cek koneksi internet');
+      return;
+    }
+
+    const rows = [];
+    Object.keys(db).forEach(monthKey=>{
+      const monthObj = db[monthKey] || {};
+      Object.values(monthObj).forEach(t=>{
+        if(t.status !== 'approved') return;
+        rows.push({ monthKey, date: t.date, desc: t.desc, type: t.type, amount: t.amount, by: t.createdByName || '-' });
+      });
+    });
+
+    if(rows.length === 0){ showToast('Belum ada transaksi disetujui untuk diekspor'); return; }
+
+    // Urutkan kronologis: tanggal transaksi asli dulu, baru bulan pencatatan
+    // sebagai penentu kalau ada 2 transaksi bertanggal sama.
+    rows.sort((a,b)=> a.date.localeCompare(b.date) || a.monthKey.localeCompare(b.monthKey));
+
+    const sheetData = [
+      ['No', 'Tanggal', 'Bulan Pencatatan', 'Keterangan', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo (Rp)', 'Dicatat Oleh']
+    ];
+
+    let saldo = 0;
+    rows.forEach((t, i)=>{
+      saldo += (t.type === 'in' ? t.amount : -t.amount);
+      sheetData.push([
+        i + 1,
+        fmtTgl(t.date),
+        monthLabel(t.monthKey),
+        t.desc,
+        t.type === 'in' ? t.amount : '',
+        t.type === 'out' ? t.amount : '',
+        saldo,
+        t.by
+      ]);
+    });
+
+    const totalIn = rows.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+    const totalOut = rows.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+    sheetData.push(['', '', '', 'TOTAL KESELURUHAN', totalIn, totalOut, saldo, '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 20 }, { wch: 16 }, { wch: 42 },
+      { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 22 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Keuangan');
+
+    const firstMonth = rows[0].monthKey;
+    const lastMonth = rows[rows.length - 1].monthKey;
+    XLSX.writeFile(wb, `Rekap-Keuangan-Lengkap-${firstMonth}_sd_${lastMonth}.xlsx`);
+    showToast('Rekap keseluruhan (XLSX) sedang diunduh');
   });
 
   /* ---------------- Surat: generator PDF ---------------- */
