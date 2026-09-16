@@ -214,6 +214,20 @@
      arsip tetap di kolom 2, kolom 1 kosong dan grid tetap seimbang
      karena justify-content:center memusatkan sisa ruang. */
 
+  /* ---------- Halaman Pengaturan: form dibatasi lebarnya, dipusatkan ---------- */
+  /* Sama seperti #viewKeuangan/#viewSurat: switchTab() menyetel inline
+     display:block/none, jadi grid di sini hanya aktif kalau elemennya
+     TIDAK sedang display:none (lihat penjelasan panjang di atas). */
+  #viewPengaturan:not([style*="display:none"]):not([style*="display: none"]) {
+    display: flex;
+    justify-content: center;
+  }
+  #viewPengaturan .card {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 8px;
+  }
+
   /* ---------- Tombol ekspor: panel mengambang, selalu terjangkau ---------- */
   /* Sebelumnya .bottom-bar dijadikan position:static (ikut alur halaman
      biasa), tapi itu bikin tombol ekspor jatuh ke paling bawah — kalau
