@@ -1,39 +1,6 @@
-/* =========================================================
-   RekapKas — Responsive Layer
-   Tidak mengubah tampilan mobile sama sekali (< 1024px):
-   tetap satu kolom vertikal dengan navigasi di bottom bar.
-
-   Di layar >= 1024px, dipasangkan dengan responsive-enhance.js
-   yang memindahkan brand, navigasi tab, dan info user/logout ke
-   sidebar kiri, lalu menata konten Keuangan & Surat jadi dua
-   kolom yang lebarnya dibatasi (tidak melar mengikuti lebar
-   layar) supaya form dan kartu tetap enak dibaca di desktop.
-   ========================================================= */
 
 @media (min-width: 1024px) {
 
-  /* ---------- Kerangka utama: sidebar + konten ---------- */
-  /* PERBAIKAN (murni CSS, tidak bergantung pada #rkContent dari JS):
-     Sebelumnya kerangka ini pakai CSS Grid dengan #rkSidebar setinggi
-     100vh yang di-span sebagai grid-row. Walau responsive-enhance.js
-     membungkus header/.wrap/.bottom-bar ke #rkContent supaya cuma ada
-     1 baris grid, itu jadi TITIK RAWAN: kalau JS-nya belum sempat
-     jalan (race condition saat load, cache lama, dsb), header/.wrap/
-     .bottom-bar kembali jadi 3 grid-item terpisah dan bug lama
-     (baris pertama dipaksa melar setinggi sidebar) muncul lagi.
-     Sekarang kerangkanya diganti jadi TIDAK PAKAI GRID SAMA SEKALI:
-     - #rkSidebar dilepas dari alur dokumen dengan position:fixed,
-       jadi dia sama sekali tidak ikut proses "sizing" tata letak
-       konten di sebelahnya — tidak peduli header/.wrap/.bottom-bar
-       ada di dalam #rkContent atau langsung di bawah #appRoot.
-     - #appRoot cukup diberi padding-left selebar sidebar supaya semua
-       kontennya (apa pun strukturnya) otomatis bergeser ke kanan,
-       menyisakan ruang untuk sidebar yang fixed di kiri.
-     Catatan: script utama aplikasi menyetel appRoot.style.display =
-     'block' langsung sebagai inline style saat login berhasil. Inline
-     style selalu menang melawan CSS biasa dari file eksternal, jadi
-     baris "display" & "padding-left" di bawah WAJIB !important supaya
-     tetap aktif. */
   #appRoot {
     display: block !important;
     padding-left: 250px !important;
@@ -41,9 +8,6 @@
     box-sizing: border-box;
   }
 
-  /* Sidebar dibuat oleh responsive-enhance.js. position:fixed membuatnya
-     lepas total dari alur/"sizing" #appRoot — tidak ada lagi
-     ketergantungan pada grid-row/#rkContent supaya layout tetap benar. */
   #rkSidebar {
     position: fixed;
     top: 0;
@@ -60,17 +24,12 @@
     z-index: 20;
   }
 
-  /* Kalau JS gagal membuat #rkContent (mis. race condition di atas),
-     header/.wrap/.bottom-bar tetap jadi anak langsung #appRoot dan
-     tetap rapat ke atas seperti biasa — padding-left #appRoot di atas
-     sudah cukup, tidak perlu aturan tambahan apa pun di sini. */
   #rkContent { min-width: 0; }
 
   #rkSidebar .brand { padding: 4px 8px 20px; }
   #rkSidebar .brand-mark { width: 40px; height: 40px; }
   #rkSidebar .brand-name { font-size: 19px; }
 
-  /* Navigasi vertikal di sidebar (dulunya .main-tabs horizontal) */
   #rkSidebar .main-tabs {
     flex-direction: column;
     background: transparent;
@@ -91,7 +50,6 @@
     box-shadow: none;
   }
 
-  /* Dorong info role + logout ke dasar sidebar */
   #rkSidebar .sidebar-spacer { flex: 1; }
   #rkSidebar .role-bar {
     padding: 14px 4px 0;
@@ -103,7 +61,6 @@
   #rkSidebar .role-pill { width: 100%; box-sizing: border-box; }
   #rkSidebar #logoutBtn { text-align: left; padding: 4px; }
 
-  /* ---------- Header: hanya berisi judul halaman + bulan ---------- */
   header .header-inner {
     max-width: 1100px;
     margin: 0 auto;
@@ -117,11 +74,8 @@
     font-size: 20px;
     margin: 0;
   }
-  header .role-bar { display: none; } /* sudah dipindah ke sidebar */
+  header .role-bar { display: none; } 
 
-  /* ---------- Lebar konten & padding ---------- */
-  /* padding-bottom dilebihkan supaya baris transaksi paling bawah tidak
-     tertutup panel ekspor yang mengambang (lihat .bottom-bar di bawah). */
   .wrap {
     max-width: 1100px;
     margin: 0 auto;
@@ -129,25 +83,6 @@
     box-sizing: border-box;
   }
 
-  /* ---------- Dashboard Keuangan: dua kolom dengan lebar terbatas ---------- */
-  /* Catatan PENTING soal bug "blank + harus scroll ke menu":
-     switchTab() di script utama menyetel viewKeuangan.style.display dan
-     viewSurat.style.display langsung sebagai inline style ('block' atau
-     'none') setiap ganti tab. Supaya grid di bawah ini aktif menimpa
-     inline "display:block" tetap perlu !important — TAPI kalau selector-nya
-     cuma "#viewKeuangan" polos, aturan !important itu juga menimpa inline
-     "display:none" saat tab sedang tidak aktif, sehingga KEDUA tab
-     (Keuangan & Surat) selalu tampil sekaligus, bertumpuk ke bawah. Untuk
-     role selain sekretaris, form surat disembunyikan (suratFormCard
-     display:none), jadi bagian yang "nimbrung" itu terlihat sebagai area
-     kosong yang panjang — inilah sumber "blank layar, perlu scroll ke
-     menu" yang dilaporkan. Makanya di sini !important hanya diberi
-     SELAMA elemen itu TIDAK sedang di-set display:none oleh JS
-     (dicek lewat :not([style*=...])), sehingga tab yang nonaktif betul-betul
-     hilang dari layar seperti maksud switchTab().
-     Kedua kolom sengaja dibatasi lebarnya (bukan 1fr) supaya form
-     transaksi tidak melar mengikuti sisa lebar layar; sisa ruang di
-     kanan/kiri dipusatkan lewat justify-content:center. */
   #viewKeuangan:not([style*="display:none"]):not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: minmax(0, 400px) minmax(0, 400px);
@@ -164,10 +99,6 @@
     grid-column: 1 / -1;
   }
 
-  /* Daftar transaksi pending & arsip surat tetap grid multi-kolom otomatis
-     supaya baris tidak melebar penuh dengan celah kosong raksasa di
-     tengahnya. Riwayat Transaksi (#txList) sengaja DIKECUALIKAN dan
-     dibuat 1 kolom penuh (lihat aturan #txList terpisah di bawah). */
   #pendingList,
   #suratPendingList,
   #suratArchiveList {
@@ -179,7 +110,6 @@
   #suratPendingList .letter-row,
   #suratArchiveList .letter-row { margin-bottom: 0; }
 
-  /* Riwayat Transaksi: 1 kolom penuh, berurutan vertikal ke bawah */
   #txList {
     display: grid;
     grid-template-columns: 1fr;
@@ -187,10 +117,6 @@
   }
   #txList .tx-row { margin-bottom: 0; }
 
-  /* ---------- Halaman Surat: form di kiri (sticky), arsip di kanan ---------- */
-  /* Sama seperti #viewKeuangan di atas: grid hanya dipaksa aktif kalau
-     elemen ini TIDAK sedang display:none (lihat penjelasan panjang di
-     atas). Lebar kedua kolom dibuat senada dengan #viewKeuangan. */
   #viewSurat:not([style*="display:none"]):not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: minmax(0, 400px) minmax(0, 400px);
@@ -210,14 +136,7 @@
   #viewSurat #suratArchiveList {
     grid-column: 2;
   }
-  /* Kalau sekretaris tidak melihat form (form disembunyikan JS),
-     arsip tetap di kolom 2, kolom 1 kosong dan grid tetap seimbang
-     karena justify-content:center memusatkan sisa ruang. */
-
-  /* ---------- Halaman Pengaturan: form dibatasi lebarnya, dipusatkan ---------- */
-  /* Sama seperti #viewKeuangan/#viewSurat: switchTab() menyetel inline
-     display:block/none, jadi grid di sini hanya aktif kalau elemennya
-     TIDAK sedang display:none (lihat penjelasan panjang di atas). */
+  
   #viewPengaturan:not([style*="display:none"]):not([style*="display: none"]) {
     display: flex;
     justify-content: center;
@@ -228,14 +147,6 @@
     margin-top: 8px;
   }
 
-  /* ---------- Tombol ekspor: panel mengambang, selalu terjangkau ---------- */
-  /* Sebelumnya .bottom-bar dijadikan position:static (ikut alur halaman
-     biasa), tapi itu bikin tombol ekspor jatuh ke paling bawah — kalau
-     transaksi banyak, harus discroll jauh untuk menjangkaunya. Sekarang
-     dibuat position:fixed lagi (mengambang) tapi ditempel di pojok
-     kanan-bawah viewport (bukan full-width seperti versi mobile), supaya
-     selalu terlihat & bisa diklik dari posisi scroll mana pun, dan tidak
-     menutupi sidebar di kiri. */
   .bottom-bar {
     position: fixed;
     left: auto;
@@ -255,22 +166,13 @@
   .bottom-bar-actions { gap: 8px; }
   #exportBtn, #exportXlsxBtn { width: 100%; padding: 11px 10px; font-size: 13px; }
 
-  /* body tidak perlu padding-bottom ekstra lagi di desktop; ruang aman di
-     bawah daftar transaksi sudah ditangani lewat padding .wrap di atas. */
-  /* switchTab() menyetel body.style.paddingBottom = '100px' inline saat
-     tab Keuangan aktif (disiapkan untuk bottom-bar fixed penuh di mobile).
-     Paksa 0 di desktop supaya tidak ada spasi ekstra yang tidak perlu. */
   body { padding-bottom: 0 !important; }
 
-  /* ---------- Rapikan lebar form 2 kolom kecil ---------- */
   .field.two-col { grid-template-columns: 1fr 1fr; }
 
-  /* Install bar lebih ramping di desktop */
   .install-bar { margin-top: 0; }
 }
 
-/* Layar sangat lebar (monitor besar): beri sedikit ruang tambahan
-   tanpa membuat kolom form/list jadi terlalu lebar dibaca */
 @media (min-width: 1440px) {
   .wrap { max-width: 1280px; }
   header .header-inner { max-width: 1280px; }
