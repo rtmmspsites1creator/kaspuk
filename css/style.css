@@ -30,7 +30,6 @@
   }
   .wrap{ max-width:480px; margin:0 auto; padding:0 14px; }
 
-  /* ---------- Header ---------- */
   header{
     position:sticky; top:0; z-index:20;
     background:rgba(243,245,248,0.92);
@@ -87,7 +86,6 @@
   }
   .main-tab.active{ background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
 
-  /* ---------- Surat ---------- */
   .letter-type-tabs{ display:flex; gap:6px; margin-bottom:14px; }
   .letter-type-btn{
     flex:1; padding:9px 4px; border-radius:10px; border:1px solid var(--border);
@@ -130,7 +128,6 @@
   }
   .letter-download svg{ width:16px; height:16px; }
 
-  /* ---------- Login screen ---------- */
   #loginScreen{
     position:fixed; inset:0; z-index:100; background:var(--bg);
     display:flex; align-items:center; justify-content:center; padding:24px;
@@ -151,7 +148,6 @@
   #loginBtn:disabled{ opacity:0.6; }
   #appRoot{ display:none; }
 
-  /* ---------- Receipt / Dashboard ---------- */
   .receipt-holder{ padding-top:14px; }
   .notch-top, .notch-bottom{
     height:11px;
@@ -199,7 +195,6 @@
   .mini-value.in{ color:var(--mint); }
   .mini-value.out{ color:var(--rose); }
 
-  /* ---------- Mic ---------- */
   .mic-zone{ display:flex; flex-direction:column; align-items:center; padding:18px 0 6px; }
   #micBtn{
     width:78px; height:78px; border-radius:50%; border:none; cursor:pointer;
@@ -219,7 +214,6 @@
   .mic-status{ margin-top:12px; font-size:13px; color:var(--text-muted); text-align:center; min-height:18px; padding:0 24px; }
   .mic-status b{ color:var(--text); font-weight:600; }
 
-  /* ---------- Form ---------- */
   .card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
     padding:16px; margin-top:14px;
@@ -252,8 +246,14 @@
     font-family:var(--font-display); margin-top:4px;
   }
   #saveBtn:active{ transform:scale(0.98); }
+  #saveBtn:disabled{ background:var(--surface-2); color:var(--text-muted); opacity:0.7; cursor:not-allowed; }
 
-  /* ---------- Transaction list ---------- */
+  #offlineBadge{
+    margin-top:10px; padding:10px 12px; border-radius:10px;
+    background:#fffbeb; color:#92400e; font-size:12.5px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+
   .list-header{
     display:flex; justify-content:space-between; align-items:center;
     margin:18px 2px 10px;
@@ -290,7 +290,6 @@
     border:1px dashed var(--border); border-radius:14px;
   }
 
-  /* ---------- Pending / approval ---------- */
   .pending-section{ margin-top:22px; }
   .pending-section .list-header{ margin-top:0; }
   .pending-badge{
@@ -320,7 +319,6 @@
     background:none; border:none; color:var(--rose); font-weight:700; font-size:12.5px; cursor:pointer; text-decoration:underline;
   }
 
-  /* ---------- Bottom bar ---------- */
   .bottom-bar{
     position:fixed; left:0; right:0; bottom:0; z-index:20;
     background:rgba(243,245,248,0.94); backdrop-filter:blur(10px);
@@ -338,7 +336,6 @@
   #exportBtn svg{ width:17px; height:17px; color:var(--amber); }
   #exportXlsxBtn svg{ width:17px; height:17px; color:#1a7f37; }
 
-  /* ---------- Toast ---------- */
   #toast{
     position:fixed; left:50%; bottom:92px; transform:translateX(-50%) translateY(20px);
     background:var(--surface-2); border:1px solid var(--border); color:var(--text);
@@ -352,7 +349,6 @@
     font-size:11.5px; color:var(--rose); text-align:center; margin-top:8px;
   }
 
-  /* ---------- Install bar ---------- */
   .install-bar{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--mint);
