@@ -28,7 +28,6 @@
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-brand">
@@ -82,7 +81,7 @@
   </div>
 
   <div id="viewKeuangan">
-  <!-- SALDO RECEIPT -->
+  
   <div class="receipt-holder">
     <div class="notch-top"></div>
     <div class="receipt">
@@ -103,7 +102,6 @@
     <div class="notch-bottom"></div>
   </div>
 
-  <!-- MIC -->
   <div class="mic-zone">
     <button id="micBtn" aria-label="Catat dengan suara">
       <svg viewBox="0 0 24 24" fill="none" stroke="#1A1206" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -111,7 +109,6 @@
     <div class="mic-status" id="micStatus">Tekan lalu ucapkan, misal <b>"makan siang lima puluh ribu"</b></div>
   </div>
 
-  <!-- FORM -->
   <div class="card">
     <div class="card-title">📝 Catat Transaksi</div>
     <div class="edit-banner" id="txEditBanner" style="display:none;">
@@ -134,10 +131,10 @@
       <label for="amountInput">Nominal (Rp)</label>
       <input type="text" inputmode="numeric" id="amountInput" placeholder="0">
     </div>
-    <button id="saveBtn">Simpan Transaksi</button>
+    <button id="saveBtn" disabled>Simpan Transaksi</button>
+    <div id="offlineBadge" style="display:none;"></div>
   </div>
 
-  <!-- PENDING -->
   <div class="pending-section" id="pendingSection" style="display:none;">
     <div class="list-header">
       <h2>Menunggu Persetujuan <span class="pending-badge" id="pendingCount">0</span></h2>
@@ -145,17 +142,15 @@
     <div id="pendingList"></div>
   </div>
 
-  <!-- LIST -->
   <div class="list-header">
     <h2>Riwayat Transaksi</h2>
     <span id="txCount">0 transaksi</span>
   </div>
   <div id="txList"></div>
-  </div><!-- /viewKeuangan -->
+  </div>
 
   <div id="viewSurat" style="display:none;">
 
-    <!-- Buat Surat (khusus Sekretaris) -->
     <div class="card" id="suratFormCard" style="display:none;">
       <div class="card-title">✍️ Buat Surat Baru</div>
       <div class="edit-banner" id="suratEditBanner" style="display:none;">
@@ -212,13 +207,11 @@
       <button id="suratSubmitBtn">Kirim untuk ACC Ketua</button>
     </div>
 
-    <!-- Menunggu ACC -->
     <div class="pending-section" id="suratPendingSection" style="display:none;">
       <div class="list-header"><h2>Surat Menunggu ACC <span class="pending-badge" id="suratPendingCount">0</span></h2></div>
       <div id="suratPendingList"></div>
     </div>
 
-    <!-- Arsip -->
     <div class="list-header">
       <h2>Arsip Surat</h2>
       <span id="suratArchiveCount">0 surat</span>
@@ -227,7 +220,6 @@
 
   </div>
 
-  <!-- PENGATURAN (khusus Ketua) -->
   <div id="viewPengaturan" style="display:none;">
     <div class="card">
       <div class="card-title">⚙️ Nama Pengurus</div>
@@ -268,10 +260,11 @@
 </div>
 
 <div id="toast"></div>
-</div><!-- /appRoot -->
+</div>
 
 <script defer src="js/config.js"></script>
 <script defer src="js/dom.js"></script>
+<script defer src="js/offline.js"></script>
 <script defer src="js/auth.js"></script>
 <script defer src="js/transactions.js"></script>
 <script defer src="js/letters.js"></script>
