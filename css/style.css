@@ -240,7 +240,7 @@
   .field input#amountInput{ font-family:var(--font-mono); font-weight:600; font-size:17px; font-variant-numeric:tabular-nums; }
   .field input:focus{ outline:none; border-color:var(--mint); }
 
-  #saveBtn, #saveSettingsBtn{
+  #saveBtn, #saveSettingsBtn, #saveOpeningBalanceBtn, #clearOpeningBalanceBtn{
     width:100%; padding:15px 0; border:none; border-radius:12px; cursor:pointer;
     background:var(--mint); color:#FFFFFF; font-weight:700; font-size:15px;
     font-family:var(--font-display); margin-top:4px;

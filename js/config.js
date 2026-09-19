@@ -31,6 +31,7 @@ const DEFAULT_ROLE_NAMES = {
 };
 
 let ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
+let OPENING_BALANCE_OVERRIDE = null;
 
 const ROLE_LABELS = {
   ketua: "Ketua",
@@ -70,6 +71,7 @@ let letters = {};
 let lettersListenerRef = null;
 
 let roleNamesListenerRef = null;
+let openingBalanceListenerRef = null;
 
 let currentMonth = getMonthKey(new Date);
 

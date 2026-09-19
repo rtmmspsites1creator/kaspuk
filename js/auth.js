@@ -95,6 +95,17 @@ auth.onAuthStateChanged(user => {
       settingSekretarisInput.value = ROLE_NAMES.sekretaris;
       settingBendaharaInput.value = ROLE_NAMES.bendahara;
     });
+    if (openingBalanceListenerRef) openingBalanceListenerRef.off();
+    openingBalanceListenerRef = fdb.ref("settings/openingBalanceOverride");
+    openingBalanceListenerRef.on("value", snapshot => {
+      const val = snapshot.val();
+      OPENING_BALANCE_OVERRIDE = val && val.monthKey ? val : null;
+      if (settingOpeningMonthInput && settingOpeningAmountInput) {
+        settingOpeningMonthInput.value = OPENING_BALANCE_OVERRIDE ? OPENING_BALANCE_OVERRIDE.monthKey : "";
+        settingOpeningAmountInput.value = OPENING_BALANCE_OVERRIDE ? OPENING_BALANCE_OVERRIDE.amount.toLocaleString("id-ID") : "";
+      }
+      renderAll();
+    });
   } else {
     currentUid = null;
     currentRole = null;
@@ -110,12 +121,22 @@ auth.onAuthStateChanged(user => {
       roleNamesListenerRef.off();
       roleNamesListenerRef = null;
     }
+    if (openingBalanceListenerRef) {
+      openingBalanceListenerRef.off();
+      openingBalanceListenerRef = null;
+    }
     db = {};
     letters = {};
     ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
+    OPENING_BALANCE_OVERRIDE = null;
     loginScreen.style.display = "flex";
     appRoot.style.display = "none";
   }
+});
+
+settingOpeningAmountInput.addEventListener("input", () => {
+  const digits = settingOpeningAmountInput.value.replace(/[^\d]/g, "");
+  settingOpeningAmountInput.value = digits ? parseInt(digits, 10).toLocaleString("id-ID") : "";
 });
 
 saveSettingsBtn.addEventListener("click", () => {
@@ -137,6 +158,41 @@ saveSettingsBtn.addEventListener("click", () => {
     bendahara: nextBendahara
   }).then(() => showToast("Nama pengurus tersimpan")).catch(() => showToast("Gagal menyimpan, cek koneksi/izin akun")).finally(() => {
     saveSettingsBtn.disabled = false;
+  });
+});
+
+saveOpeningBalanceBtn.addEventListener("click", () => {
+  if (currentRole !== "ketua") {
+    showToast("Hanya Ketua yang bisa mengubah saldo awal periode aktif");
+    return;
+  }
+  const monthKey = settingOpeningMonthInput.value;
+  const amountRaw = settingOpeningAmountInput.value.replace(/[^\d]/g, "");
+  const amount = parseInt(amountRaw || "0", 10);
+  if (!monthKey) {
+    showToast("Pilih dulu bulan mulainya");
+    return;
+  }
+  saveOpeningBalanceBtn.disabled = true;
+  fdb.ref("settings/openingBalanceOverride").set({
+    monthKey: monthKey,
+    amount: amount,
+    setByName: ROLE_NAMES.ketua,
+    setAt: firebase.database.ServerValue.TIMESTAMP
+  }).then(() => showToast("Saldo awal periode aktif tersimpan")).catch(() => showToast("Gagal menyimpan, cek koneksi/izin akun")).finally(() => {
+    saveOpeningBalanceBtn.disabled = false;
+  });
+});
+
+clearOpeningBalanceBtn.addEventListener("click", () => {
+  if (currentRole !== "ketua") return;
+  clearOpeningBalanceBtn.disabled = true;
+  fdb.ref("settings/openingBalanceOverride").remove().then(() => {
+    settingOpeningMonthInput.value = "";
+    settingOpeningAmountInput.value = "";
+    showToast("Saldo awal periode aktif dihapus, kembali ke perhitungan penuh dari awal riwayat");
+  }).catch(() => showToast("Gagal menghapus, cek koneksi/izin akun")).finally(() => {
+    clearOpeningBalanceBtn.disabled = false;
   });
 });
 

@@ -11,8 +11,14 @@ function getMonthList() {
 
 function getOpeningBalance(beforeMonthKey) {
   let total = 0;
+  let startFrom = null;
+  if (OPENING_BALANCE_OVERRIDE && beforeMonthKey >= OPENING_BALANCE_OVERRIDE.monthKey) {
+    total = OPENING_BALANCE_OVERRIDE.amount;
+    startFrom = OPENING_BALANCE_OVERRIDE.monthKey;
+  }
   Object.keys(db).forEach(monthKey => {
     if (monthKey >= beforeMonthKey) return;
+    if (startFrom !== null && monthKey < startFrom) return;
     const monthObj = db[monthKey] || {};
     Object.values(monthObj).forEach(t => {
       if (t.status !== "approved") return;
