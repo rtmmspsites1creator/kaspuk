@@ -43,10 +43,6 @@ const settingSekretarisInput = document.getElementById("settingSekretarisInput")
 const settingBendaharaInput = document.getElementById("settingBendaharaInput");
 
 const saveSettingsBtn = document.getElementById("saveSettingsBtn");
-const settingOpeningMonthInput = document.getElementById("settingOpeningMonthInput");
-const settingOpeningAmountInput = document.getElementById("settingOpeningAmountInput");
-const saveOpeningBalanceBtn = document.getElementById("saveOpeningBalanceBtn");
-const clearOpeningBalanceBtn = document.getElementById("clearOpeningBalanceBtn");
 
 const suratFormCard = document.getElementById("suratFormCard");
 
