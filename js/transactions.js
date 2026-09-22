@@ -78,7 +78,7 @@ saveBtn.addEventListener("click", () => {
   }
   const monthKey = getMonthKey(new Date(date + "T00:00:00"));
   saveBtn.disabled = true;
-  const isKetua = currentRole === "ketua";
+  const isKetua = isFullAdmin();
   if (editingTxId) {
     const updates = {
       date: date,
@@ -191,22 +191,22 @@ function cancelEditTx() {
 txEditCancelBtn.addEventListener("click", cancelEditTx);
 
 function approveTx(id) {
-  if (currentRole !== "ketua") return;
+  if (!isFullAdmin()) return;
   fdb.ref("transactions/" + currentMonth + "/" + id).update({
     status: "approved",
-    approvedByName: ROLE_NAMES.ketua,
+    approvedByName: ROLE_NAMES[currentRole],
     approvedAt: firebase.database.ServerValue.TIMESTAMP
   }).then(() => showToast("Transaksi disetujui")).catch(() => showToast("Gagal menyetujui transaksi"));
 }
 
 function rejectTx(id) {
-  if (currentRole !== "ketua") return;
+  if (!isFullAdmin()) return;
   fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => showToast("Transaksi ditolak & dihapus")).catch(() => showToast("Gagal menolak transaksi"));
 }
 
 function deleteTx(id) {
-  if (currentRole !== "ketua") {
-    showToast("Hanya Ketua yang bisa menghapus transaksi");
+  if (!isFullAdmin()) {
+    showToast("Hanya Ketua/Super Admin yang bisa menghapus transaksi");
     return;
   }
   fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => showToast("Transaksi dihapus")).catch(() => showToast("Gagal menghapus, tidak punya izin"));
