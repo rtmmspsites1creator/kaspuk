@@ -41,9 +41,11 @@ if ("serviceWorker" in navigator) {
 function switchTab(tab) {
   tabKeuangan.classList.toggle("active", tab === "keuangan");
   tabSurat.classList.toggle("active", tab === "surat");
+  tabNotulen.classList.toggle("active", tab === "notulen");
   tabPengaturan.classList.toggle("active", tab === "pengaturan");
   viewKeuangan.style.display = tab === "keuangan" ? "block" : "none";
   viewSurat.style.display = tab === "surat" ? "block" : "none";
+  viewNotulen.style.display = tab === "notulen" ? "block" : "none";
   viewPengaturan.style.display = tab === "pengaturan" ? "block" : "none";
   bottomBarKeuangan.style.display = tab === "keuangan" ? "block" : "none";
   document.body.style.paddingBottom = tab === "keuangan" ? "100px" : "24px";
@@ -52,6 +54,8 @@ function switchTab(tab) {
 tabKeuangan.addEventListener("click", () => switchTab("keuangan"));
 
 tabSurat.addEventListener("click", () => switchTab("surat"));
+
+tabNotulen.addEventListener("click", () => switchTab("notulen"));
 
 tabPengaturan.addEventListener("click", () => switchTab("pengaturan"));
 
