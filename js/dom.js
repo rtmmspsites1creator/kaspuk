@@ -26,11 +26,15 @@ const tabKeuangan = document.getElementById("tabKeuangan");
 
 const tabSurat = document.getElementById("tabSurat");
 
+const tabNotulen = document.getElementById("tabNotulen");
+
 const tabPengaturan = document.getElementById("tabPengaturan");
 
 const viewKeuangan = document.getElementById("viewKeuangan");
 
 const viewSurat = document.getElementById("viewSurat");
+
+const viewNotulen = document.getElementById("viewNotulen");
 
 const viewPengaturan = document.getElementById("viewPengaturan");
 
@@ -119,6 +123,8 @@ let editingTxId = null;
 let editingTxMonth = null;
 
 let editingLetterId = null;
+
+let editingNotulenId = null;
 
 dateInput.value = todayISO();
 
