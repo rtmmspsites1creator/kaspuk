@@ -255,6 +255,35 @@ function buildNotulenPDF(n) {
     lines.forEach((line, i) => doc.text(line, marginX + 38, y + i * (lineHeight || 5.2)));
     y += Math.max(1, lines.length) * (lineHeight || 5.2);
   }
+  // Merapikan isi kolom bebas seperti "Hasil Pembahasan / Keputusan": baris kosong jadi jeda
+  // paragraf, dan baris berawalan angka/bullet ("1.", "2)", "-", "•") dirender dengan indentasi
+  // menggantung supaya sambungan teks yang panjang tetap rapi sejajar, bukan menempel ke nomor.
+  function richText(text, fontSize, lineHeight) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    const rawLines = String(text || "").split(/\r?\n/);
+    rawLines.forEach(rawLine => {
+      const trimmed = rawLine.trim();
+      if (!trimmed) {
+        y += lineHeight * 0.5;
+        return;
+      }
+      const listMatch = trimmed.match(/^(\d+[.)]|[-•*])\s+(.*)$/);
+      const indent = listMatch ? 7 : 0;
+      const marker = listMatch ? listMatch[1] : "";
+      const body = listMatch ? listMatch[2] : trimmed;
+      const wrapped = doc.splitTextToSize(body, maxW - indent);
+      wrapped.forEach((w, i) => {
+        if (y > pageHeight - 20) {
+          doc.addPage();
+          y = 20;
+        }
+        if (i === 0 && marker) doc.text(marker, marginX, y);
+        doc.text(w, marginX + indent, y);
+        y += lineHeight;
+      });
+    });
+  }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
@@ -277,20 +306,20 @@ function buildNotulenPDF(n) {
 
   if (n.data.peserta) {
     para("Peserta Rapat:", 10.5, 5.2, true);
-    para(n.data.peserta, 10.5, 5.2, false);
+    richText(n.data.peserta, 10.5, 5.2);
     y += 1;
   }
   if (n.data.agenda) {
     para("Agenda:", 10.5, 5.2, true);
-    para(n.data.agenda, 10.5, 5.2, false);
+    richText(n.data.agenda, 10.5, 5.2);
     y += 1;
   }
   para("Hasil Pembahasan / Keputusan:", 10.5, 5.2, true);
-  para(n.data.pembahasan, 10.5, 5.2, false);
+  richText(n.data.pembahasan, 10.5, 5.2);
   y += 1;
   if (n.data.tindakLanjut) {
     para("Tindak Lanjut:", 10.5, 5.2, true);
-    para(n.data.tindakLanjut, 10.5, 5.2, false);
+    richText(n.data.tindakLanjut, 10.5, 5.2);
     y += 1;
   }
   if (n.data.catatan) {
@@ -316,6 +345,15 @@ function previewNotulenPDF(id) {
   window.open(doc.output("bloburl"), "_blank");
 }
 
+// Ubah nomor notulen resmi (yang mengandung "/") jadi nama file yang aman,
+// supaya nama file PDF persis mencerminkan nomor suratnya untuk dokumentasi.
+function sanitizeFilename(str) {
+  return String(str || "")
+    .replace(/\//g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function downloadNotulenPDF(id) {
   const n = notulen[id];
   if (!n) {
@@ -323,6 +361,7 @@ function downloadNotulenPDF(id) {
     return;
   }
   const doc = buildNotulenPDF(n);
-  doc.save(`Notulen-${n.data.tanggalRapat}.pdf`);
+  const fileLabel = n.nomorNotulen ? sanitizeFilename(n.nomorNotulen) : n.data.tanggalRapat;
+  doc.save(`Notulen-${fileLabel}.pdf`);
   showToast("Notulen PDF sedang diunduh");
 }
