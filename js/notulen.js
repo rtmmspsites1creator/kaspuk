@@ -61,7 +61,7 @@ notulenSubmitBtn.addEventListener("click", () => {
 
   if (editingNotulenId) {
     const original = notulen[editingNotulenId];
-    const allowed = original && (currentRole === "ketua" || original.createdByUid === currentUid);
+    const allowed = original && (isFullAdmin() || original.createdByUid === currentUid);
     if (!allowed) {
       showToast("Tidak punya izin mengedit notulen ini");
       return;
@@ -151,7 +151,7 @@ notulenEditCancelBtn.addEventListener("click", cancelEditNotulen);
 
 function deleteNotulen(id) {
   const n = notulen[id];
-  const allowed = n && (currentRole === "ketua" || n.createdByUid === currentUid);
+  const allowed = n && (isFullAdmin() || n.createdByUid === currentUid);
   if (!allowed) {
     showToast("Tidak punya izin menghapus notulen ini");
     return;
@@ -176,7 +176,7 @@ function renderNotulen() {
   }
 
   notulenListEl.innerHTML = all.map(n => {
-    const canManage = currentRole === "ketua" || n.createdByUid === currentUid;
+    const canManage = isFullAdmin() || n.createdByUid === currentUid;
     return `
       <div class="letter-row">
         <div class="letter-icon">${iconKeterangan}</div>
