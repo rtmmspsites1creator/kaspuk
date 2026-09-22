@@ -77,6 +77,7 @@
   <div class="main-tabs">
     <button class="main-tab active" id="tabKeuangan" data-tab="keuangan">💰 Keuangan</button>
     <button class="main-tab" id="tabSurat" data-tab="surat">📄 Surat</button>
+    <button class="main-tab" id="tabNotulen" data-tab="notulen">🗒️ Notulen</button>
     <button class="main-tab" id="tabPengaturan" data-tab="pengaturan" style="display:none;">⚙️ Pengaturan</button>
   </div>
 
@@ -220,6 +221,63 @@
 
   </div>
 
+  <div id="viewNotulen" style="display:none;">
+
+    <div class="card" id="notulenFormCard">
+      <div class="card-title">🗒️ Buat Notulen Rapat</div>
+      <div class="edit-banner" id="notulenEditBanner" style="display:none;">
+        <span>✏️ Mode edit notulen</span>
+        <button id="notulenEditCancelBtn" type="button">Batal</button>
+      </div>
+
+      <div class="field">
+        <label for="notJudul">Judul / Perihal Rapat</label>
+        <input type="text" id="notJudul" placeholder="Contoh: Rapat Koordinasi Bulanan">
+      </div>
+      <div class="field two-col">
+        <div><label>Tanggal Rapat</label><input type="date" id="notTanggal"></div>
+        <div><label>Tempat</label><input type="text" id="notTempat" placeholder="Contoh: Sekretariat PUK"></div>
+      </div>
+      <div class="field two-col">
+        <div><label>Waktu Mulai</label><input type="time" id="notWaktuMulai"></div>
+        <div><label>Waktu Selesai</label><input type="time" id="notWaktuSelesai"></div>
+      </div>
+      <div class="field two-col">
+        <div><label>Pemimpin Rapat</label><input type="text" id="notPemimpin" placeholder="Nama pemimpin rapat"></div>
+        <div><label>Notulis</label><input type="text" id="notNotulis" placeholder="Nama pencatat"></div>
+      </div>
+      <div class="field">
+        <label for="notPeserta">Peserta Rapat</label>
+        <textarea id="notPeserta" rows="3" placeholder="Satu nama per baris"></textarea>
+      </div>
+      <div class="field">
+        <label for="notAgenda">Agenda Rapat</label>
+        <textarea id="notAgenda" rows="3" placeholder="1. Pembukaan&#10;2. Pembahasan..."></textarea>
+      </div>
+      <div class="field">
+        <label for="notPembahasan">Hasil Pembahasan / Keputusan</label>
+        <textarea id="notPembahasan" rows="4" placeholder="Ringkasan pembahasan dan keputusan rapat"></textarea>
+      </div>
+      <div class="field">
+        <label for="notTindakLanjut">Tindak Lanjut</label>
+        <textarea id="notTindakLanjut" rows="3" placeholder="Siapa - apa - kapan"></textarea>
+      </div>
+      <div class="field">
+        <label for="notCatatan">Catatan Tambahan (opsional)</label>
+        <textarea id="notCatatan" rows="2"></textarea>
+      </div>
+
+      <button id="notulenSubmitBtn">Simpan Notulen</button>
+    </div>
+
+    <div class="list-header">
+      <h2>Daftar Notulen</h2>
+      <span id="notulenCount">0 notulen</span>
+    </div>
+    <div id="notulenList"></div>
+
+  </div>
+
   <div id="viewPengaturan" style="display:none;">
     <div class="card">
       <div class="card-title">⚙️ Nama Pengurus</div>
@@ -268,6 +326,7 @@
 <script defer src="js/auth.js"></script>
 <script defer src="js/transactions.js"></script>
 <script defer src="js/letters.js"></script>
+<script defer src="js/notulen.js"></script>
 <script defer src="js/render.js"></script>
 <script defer src="js/app.js"></script>
 <script src="responsive-enhance.js" defer></script>
