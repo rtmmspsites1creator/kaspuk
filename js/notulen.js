@@ -345,15 +345,6 @@ function previewNotulenPDF(id) {
   window.open(doc.output("bloburl"), "_blank");
 }
 
-// Ubah nomor notulen resmi (yang mengandung "/") jadi nama file yang aman,
-// supaya nama file PDF persis mencerminkan nomor suratnya untuk dokumentasi.
-function sanitizeFilename(str) {
-  return String(str || "")
-    .replace(/\//g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function downloadNotulenPDF(id) {
   const n = notulen[id];
   if (!n) {
