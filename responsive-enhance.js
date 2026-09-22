@@ -39,9 +39,10 @@
   function updatePageTitle() {
     const titleEl = document.getElementById("rkPageTitle");
     if (!titleEl) return;
-    const suratActive = document.getElementById("tabSurat");
-    const isSurat = suratActive && suratActive.classList.contains("active");
-    titleEl.textContent = isSurat ? "Surat" : "Keuangan";
+    const labels = { keuangan: "Keuangan", surat: "Surat", notulen: "Notulen", pengaturan: "Pengaturan" };
+    const activeBtn = document.querySelector(".main-tabs .main-tab.active");
+    const tab = activeBtn ? activeBtn.dataset.tab : "keuangan";
+    titleEl.textContent = labels[tab] || "Keuangan";
   }
   function applyDesktopLayout() {
     const appRoot = document.getElementById("appRoot");
@@ -95,10 +96,9 @@
     }
   }
   function hookTabTitleUpdates() {
-    const tabKeuangan = document.getElementById("tabKeuangan");
-    const tabSurat = document.getElementById("tabSurat");
-    if (tabKeuangan) tabKeuangan.addEventListener("click", () => setTimeout(updatePageTitle, 0));
-    if (tabSurat) tabSurat.addEventListener("click", () => setTimeout(updatePageTitle, 0));
+    document.querySelectorAll(".main-tabs .main-tab").forEach(btn => {
+      btn.addEventListener("click", () => setTimeout(updatePageTitle, 0));
+    });
   }
   function init() {
     hookTabTitleUpdates();
