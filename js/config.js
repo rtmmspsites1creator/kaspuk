@@ -47,6 +47,15 @@ function isFullAdmin() {
   return currentRole === "ketua" || currentRole === "superadmin";
 }
 
+// Ubah nomor surat/notulen resmi (yang mengandung "/") jadi nama file yang aman,
+// supaya nama file PDF persis mencerminkan nomor dokumennya untuk dokumentasi.
+function sanitizeFilename(str) {
+  return String(str || "")
+    .replace(/\//g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getMonthKey(d) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
 }
