@@ -365,12 +365,7 @@ function drawLetterClosing(doc, pageWidth, marginX, y, tanggalSurat, signers) {
   return ty;
 }
 
-function downloadLetterPDF(id) {
-  const l = letters[id];
-  if (!l) {
-    showToast("Surat tidak ditemukan");
-    return;
-  }
+function buildLetterPDF(l) {
   const {jsPDF: jsPDF} = window.jspdf;
   const doc = new jsPDF;
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -518,7 +513,28 @@ function downloadLetterPDF(id) {
       name: ROLE_NAMES.ketua
     } ]);
   }
+  return doc;
+}
+
+function previewLetterPDF(id) {
+  const l = letters[id];
+  if (!l) {
+    showToast("Surat tidak ditemukan");
+    return;
+  }
+  const doc = buildLetterPDF(l);
+  window.open(doc.output("bloburl"), "_blank");
+}
+
+function downloadLetterPDF(id) {
+  const l = letters[id];
+  if (!l) {
+    showToast("Surat tidak ditemukan");
+    return;
+  }
+  const doc = buildLetterPDF(l);
   const fileType = l.type === "mandat" ? "Tugas" : l.type === "undangan" ? "Undangan" : "Keterangan";
-  doc.save(`Surat-${fileType}-${l.tanggalSurat}.pdf`);
+  const fileLabel = l.nomorSurat ? sanitizeFilename(l.nomorSurat) : l.tanggalSurat;
+  doc.save(`Surat-${fileType}-${fileLabel}.pdf`);
   showToast("Surat PDF sedang diunduh");
 }
