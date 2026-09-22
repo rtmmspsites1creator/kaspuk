@@ -67,7 +67,11 @@ let db = {};
 
 let letters = {};
 
+let notulen = {};
+
 let lettersListenerRef = null;
+
+let notulenListenerRef = null;
 
 let roleNamesListenerRef = null;
 
