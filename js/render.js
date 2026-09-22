@@ -55,7 +55,7 @@ function renderList() {
     txListEl.innerHTML = `<div class="empty-state">Belum ada transaksi disetujui bulan ini.<br>Mulai catat lewat mikrofon atau form di atas.</div>`;
     return;
   }
-  const canDelete = currentRole === "ketua";
+  const canDelete = isFullAdmin();
   txListEl.innerHTML = list.map(t => `\n      <div class="tx-row">\n        <div class="tx-icon ${t.type}">${t.type === "in" ? iconIn : iconOut}</div>\n        <div class="tx-body">\n          <div class="tx-desc">${escapeHTML(t.desc)}</div>\n          <div class="tx-date">${formatDateShort(t.date)}${t.createdByName ? " · oleh " + escapeHTML(t.createdByName) : ""}</div>\n        </div>\n        <div class="tx-amount ${t.type}">${t.type === "in" ? "+" : "-"}${formatRupiah(t.amount)}</div>\n        ${canDelete ? `<div class="tx-actions">\n          <button class="tx-edit" data-id="${t.id}" aria-label="Edit">${iconEdit}</button>\n          <button class="tx-del" data-id="${t.id}" aria-label="Hapus">${iconTrash}</button>\n        </div>` : ""}\n      </div>\n    `).join("");
   txListEl.querySelectorAll(".tx-edit").forEach(btn => {
     btn.addEventListener("click", () => startEditTx(btn.dataset.id));
@@ -73,7 +73,7 @@ function renderPending() {
     pendingListEl.innerHTML = "";
     return;
   }
-  const isKetua = currentRole === "ketua";
+  const isKetua = isFullAdmin();
   pendingListEl.innerHTML = list.map(t => {
     const canEdit = isKetua || t.createdByUid === currentUid;
     return `\n      <div class="tx-row pending">\n        <div class="tx-icon ${t.type}">${t.type === "in" ? iconIn : iconOut}</div>\n        <div class="tx-body">\n          <div class="tx-desc">${escapeHTML(t.desc)}</div>\n          <div class="tx-date">${formatDateShort(t.date)} · oleh ${escapeHTML(t.createdByName || "-")}</div>\n          <div class="tx-status">${iconClock} Menunggu ACC Ketua</div>\n        </div>\n        <div class="tx-amount ${t.type}">${t.type === "in" ? "+" : "-"}${formatRupiah(t.amount)}</div>\n        <div class="tx-actions">\n          ${canEdit ? `<button class="tx-edit" data-id="${t.id}" aria-label="Edit">${iconEdit}</button>` : ""}\n          ${isKetua ? `<button class="tx-approve" data-id="${t.id}" aria-label="Setujui">${iconCheck}</button>\n            <button class="tx-reject" data-id="${t.id}" aria-label="Tolak">${iconX}</button>` : ""}\n        </div>\n      </div>\n    `;
@@ -128,7 +128,7 @@ function renderSurat() {
   const approved = all.filter(l => l.status === "approved").sort((a, b) => b.createdAt - a.createdAt);
   suratPendingCount.textContent = pending.length;
   suratPendingSection.style.display = pending.length ? "block" : "none";
-  const isKetua = currentRole === "ketua";
+  const isKetua = isFullAdmin();
   suratPendingList.innerHTML = pending.map(l => {
     const canEdit = isKetua || l.createdByUid === currentUid;
     return `\n      <div class="letter-row pending">\n        <div class="letter-icon">${letterIcon(l.type)}</div>\n        <div class="letter-body">\n          <div class="letter-title">${escapeHTML(LETTER_LABELS[l.type])}</div>\n          <div class="letter-sub">${escapeHTML(letterSummary(l))}</div>\n          <div class="tx-status">${iconClock} Menunggu ACC · oleh ${escapeHTML(l.createdByName || "-")}</div>\n        </div>\n        <div class="tx-actions">\n          ${canEdit ? `<button class="tx-edit" data-id="${l.id}" aria-label="Edit">${iconEdit}</button>` : ""}\n          ${isKetua ? `<button class="tx-approve" data-id="${l.id}" aria-label="Setujui">${iconCheck}</button>\n            <button class="tx-reject" data-id="${l.id}" aria-label="Tolak">${iconX}</button>` : ""}\n        </div>\n      </div>\n    `;
