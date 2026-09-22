@@ -61,6 +61,8 @@ auth.onAuthStateChanged(user => {
     userAvatar.textContent = ROLE_NAMES[currentRole].charAt(0).toUpperCase();
     userName.textContent = ROLE_NAMES[currentRole];
     userRole.textContent = ROLE_LABELS[currentRole];
+    const notNotulisEl = document.getElementById("notNotulis");
+    if (notNotulisEl && !notNotulisEl.value) notNotulisEl.value = ROLE_NAMES[currentRole];
     tabPengaturan.style.display = currentRole === "ketua" ? "block" : "none";
     loginScreen.style.display = "none";
     appRoot.style.display = "block";
@@ -79,6 +81,12 @@ auth.onAuthStateChanged(user => {
     lettersListenerRef.on("value", snapshot => {
       letters = snapshot.val() || {};
       renderSurat();
+    });
+    if (notulenListenerRef) notulenListenerRef.off();
+    notulenListenerRef = fdb.ref("notulen");
+    notulenListenerRef.on("value", snapshot => {
+      notulen = snapshot.val() || {};
+      renderNotulen();
     });
     if (roleNamesListenerRef) roleNamesListenerRef.off();
     roleNamesListenerRef = fdb.ref("settings/roleNames");
@@ -106,12 +114,17 @@ auth.onAuthStateChanged(user => {
       lettersListenerRef.off();
       lettersListenerRef = null;
     }
+    if (notulenListenerRef) {
+      notulenListenerRef.off();
+      notulenListenerRef = null;
+    }
     if (roleNamesListenerRef) {
       roleNamesListenerRef.off();
       roleNamesListenerRef = null;
     }
     db = {};
     letters = {};
+    notulen = {};
     ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
     loginScreen.style.display = "flex";
     appRoot.style.display = "none";
