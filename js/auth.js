@@ -5,7 +5,8 @@ let txListenerRef = null;
 const USERNAME_MAP = {
   ketua: "ketua@gmail.com",
   sekretaris: "sekretaris@gmail.com",
-  bendahara: "bendahara@gmail.com"
+  bendahara: "bendahara@gmail.com",
+  superadmin: "superadmin@gmail.com"
 };
 
 function doLogin() {
@@ -50,7 +51,7 @@ auth.onAuthStateChanged(user => {
     currentUid = user.uid;
     currentRole = ROLE_MAP[user.uid] || null;
     if (!currentRole) {
-      loginError.textContent = "Akun ini belum terdaftar sebagai Ketua/Sekretaris/Bendahara.";
+      loginError.textContent = "Akun ini belum terdaftar sebagai Ketua/Sekretaris/Bendahara/Super Admin.";
       auth.signOut();
       return;
     }
@@ -63,7 +64,7 @@ auth.onAuthStateChanged(user => {
     userRole.textContent = ROLE_LABELS[currentRole];
     const notNotulisEl = document.getElementById("notNotulis");
     if (notNotulisEl && !notNotulisEl.value) notNotulisEl.value = ROLE_NAMES[currentRole];
-    tabPengaturan.style.display = currentRole === "ketua" ? "block" : "none";
+    tabPengaturan.style.display = isFullAdmin() ? "block" : "none";
     loginScreen.style.display = "none";
     appRoot.style.display = "block";
     loginEmail.value = "";
@@ -74,8 +75,8 @@ auth.onAuthStateChanged(user => {
       db = snapshot.val() || {};
       renderAll();
     });
-    suratFormCard.style.display = currentRole === "sekretaris" || currentRole === "ketua" ? "block" : "none";
-    suratSubmitBtn.textContent = currentRole === "ketua" ? "Simpan Surat" : "Kirim untuk ACC Ketua";
+    suratFormCard.style.display = currentRole === "sekretaris" || isFullAdmin() ? "block" : "none";
+    suratSubmitBtn.textContent = isFullAdmin() ? "Simpan Surat" : "Kirim untuk ACC Ketua";
     if (lettersListenerRef) lettersListenerRef.off();
     lettersListenerRef = fdb.ref("letters");
     lettersListenerRef.on("value", snapshot => {
@@ -95,7 +96,8 @@ auth.onAuthStateChanged(user => {
       ROLE_NAMES = {
         ketua: custom.ketua || DEFAULT_ROLE_NAMES.ketua,
         sekretaris: custom.sekretaris || DEFAULT_ROLE_NAMES.sekretaris,
-        bendahara: custom.bendahara || DEFAULT_ROLE_NAMES.bendahara
+        bendahara: custom.bendahara || DEFAULT_ROLE_NAMES.bendahara,
+        superadmin: custom.superadmin || DEFAULT_ROLE_NAMES.superadmin
       };
       userAvatar.textContent = ROLE_NAMES[currentRole].charAt(0).toUpperCase();
       userName.textContent = ROLE_NAMES[currentRole];
@@ -132,8 +134,8 @@ auth.onAuthStateChanged(user => {
 });
 
 saveSettingsBtn.addEventListener("click", () => {
-  if (currentRole !== "ketua") {
-    showToast("Hanya Ketua yang bisa mengubah nama pengurus");
+  if (!isFullAdmin()) {
+    showToast("Hanya Ketua/Super Admin yang bisa mengubah nama pengurus");
     return;
   }
   const nextKetua = settingKetuaInput.value.trim();
