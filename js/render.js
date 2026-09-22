@@ -140,8 +140,11 @@ function renderSurat() {
   if (!approved.length) {
     suratArchiveList.innerHTML = `<div class="empty-state">Belum ada surat yang disetujui.</div>`;
   } else {
-    suratArchiveList.innerHTML = approved.map(l => `\n        <div class="letter-row">\n          <div class="letter-icon">${letterIcon(l.type)}</div>\n          <div class="letter-body">\n            <div class="letter-title">${escapeHTML(LETTER_LABELS[l.type])}</div>\n            <div class="letter-sub">${escapeHTML(letterSummary(l))}</div>\n            <div class="letter-nomor">${escapeHTML(l.nomorSurat || "-")}</div>\n          </div>\n          <div class="tx-actions">\n            ${isKetua ? `<button class="tx-edit" data-id="${l.id}" aria-label="Edit">${iconEdit}</button>\n            <button class="tx-del" data-id="${l.id}" aria-label="Hapus">${iconTrash}</button>` : ""}\n            <button class="letter-download" data-id="${l.id}" aria-label="Unduh PDF">${iconDownload}</button>\n          </div>\n        </div>\n      `).join("");
-    suratArchiveList.querySelectorAll(".letter-download").forEach(btn => {
+    suratArchiveList.innerHTML = approved.map(l => `\n        <div class="letter-row">\n          <div class="letter-icon">${letterIcon(l.type)}</div>\n          <div class="letter-body">\n            <div class="letter-title">${escapeHTML(LETTER_LABELS[l.type])}</div>\n            <div class="letter-sub">${escapeHTML(letterSummary(l))}</div>\n            <div class="letter-nomor">${escapeHTML(l.nomorSurat || "-")}</div>\n          </div>\n          <div class="tx-actions">\n            ${isKetua ? `<button class="tx-edit" data-id="${l.id}" aria-label="Edit">${iconEdit}</button>\n            <button class="tx-del" data-id="${l.id}" aria-label="Hapus">${iconTrash}</button>` : ""}\n            <button class="letter-download surat-preview" data-id="${l.id}" aria-label="Preview PDF">👁️</button>\n            <button class="letter-download" data-id="${l.id}" aria-label="Unduh PDF">${iconDownload}</button>\n          </div>\n        </div>\n      `).join("");
+    suratArchiveList.querySelectorAll(".surat-preview").forEach(btn => {
+      btn.addEventListener("click", () => previewLetterPDF(btn.dataset.id));
+    });
+    suratArchiveList.querySelectorAll(".letter-download:not(.surat-preview)").forEach(btn => {
       btn.addEventListener("click", () => downloadLetterPDF(btn.dataset.id));
     });
     suratArchiveList.querySelectorAll(".tx-edit").forEach(btn => {
