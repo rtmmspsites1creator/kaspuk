@@ -80,7 +80,7 @@ function clearLetterForm() {
 suratSubmitBtn.addEventListener("click", () => {
   if (editingLetterId) {
     const original = letters[editingLetterId];
-    const allowed = original && (currentRole === "ketua" || original.createdByUid === currentUid);
+    const allowed = original && (isFullAdmin() || original.createdByUid === currentUid);
     if (!allowed) {
       showToast("Tidak punya izin mengedit surat ini");
       return;
@@ -102,13 +102,13 @@ suratSubmitBtn.addEventListener("click", () => {
     });
     return;
   }
-  if (currentRole !== "sekretaris" && currentRole !== "ketua") {
-    showToast("Hanya Sekretaris/Ketua yang bisa membuat surat");
+  if (currentRole !== "sekretaris" && !isFullAdmin()) {
+    showToast("Hanya Sekretaris/Ketua/Super Admin yang bisa membuat surat");
     return;
   }
   const data = collectLetterData();
   if (!data) return;
-  const isKetua = currentRole === "ketua";
+  const isKetua = isFullAdmin();
   suratSubmitBtn.disabled = true;
   fdb.ref("letters").push({
     type: selectedLetterType,
@@ -193,14 +193,14 @@ function cancelEditLetter() {
   editingLetterId = null;
   clearLetterForm();
   suratEditBanner.style.display = "none";
-  suratSubmitBtn.textContent = currentRole === "ketua" ? "Simpan Surat" : "Kirim untuk ACC Ketua";
-  if (currentRole !== "sekretaris" && currentRole !== "ketua") suratFormCard.style.display = "none";
+  suratSubmitBtn.textContent = isFullAdmin() ? "Simpan Surat" : "Kirim untuk ACC Ketua";
+  if (currentRole !== "sekretaris" && !isFullAdmin()) suratFormCard.style.display = "none";
 }
 
 suratEditCancelBtn.addEventListener("click", cancelEditLetter);
 
 function approveLetter(id) {
-  if (currentRole !== "ketua") return;
+  if (!isFullAdmin()) return;
   const letterType = letters[id] && letters[id].type || "undangan";
   const code = LETTER_CODES[letterType] || "SRT";
   const year = (new Date).getFullYear();
@@ -211,20 +211,20 @@ function approveLetter(id) {
     return fdb.ref("letters/" + id).update({
       status: "approved",
       nomorSurat: nomor,
-      approvedByName: ROLE_NAMES.ketua,
+      approvedByName: ROLE_NAMES[currentRole],
       approvedAt: firebase.database.ServerValue.TIMESTAMP
     });
   }).then(() => showToast("Surat disetujui & diberi nomor")).catch(() => showToast("Gagal menyetujui surat"));
 }
 
 function rejectLetter(id) {
-  if (currentRole !== "ketua") return;
+  if (!isFullAdmin()) return;
   fdb.ref("letters/" + id).remove().then(() => showToast("Surat ditolak & dihapus")).catch(() => showToast("Gagal menolak surat"));
 }
 
 function deleteLetter(id) {
-  if (currentRole !== "ketua") {
-    showToast("Hanya Ketua yang bisa menghapus surat");
+  if (!isFullAdmin()) {
+    showToast("Hanya Ketua/Super Admin yang bisa menghapus surat");
     return;
   }
   fdb.ref("letters/" + id).remove().then(() => showToast("Surat dihapus")).catch(() => showToast("Gagal menghapus, tidak punya izin"));
