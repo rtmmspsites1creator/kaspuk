@@ -19,7 +19,8 @@ const fdb = firebase.database();
 const ROLE_MAP = {
   "6L5UHLxxn2VnnUur3DDtthoePkN2": "ketua",
   bpZpoX6BJ1OQ7LUW01E5x2zgNL02: "sekretaris",
-  RTmaqSfX2we4kq6xOog1qIZusO52: "bendahara"
+  RTmaqSfX2we4kq6xOog1qIZusO52: "bendahara",
+  Nml7CdkAjwSxs3RV170ink1gJvc2: "superadmin"
 };
 
 const MONTHS_ID = [ "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" ];
@@ -27,7 +28,8 @@ const MONTHS_ID = [ "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Jul
 const DEFAULT_ROLE_NAMES = {
   ketua: "Ajat Sudrajat, S.H.",
   sekretaris: "Suhardi",
-  bendahara: "Munawarudin"
+  bendahara: "Munawarudin",
+  superadmin: "Riski Hariyanto"
 };
 
 let ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
@@ -35,8 +37,15 @@ let ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
 const ROLE_LABELS = {
   ketua: "Ketua",
   sekretaris: "Sekretaris",
-  bendahara: "Bendahara"
+  bendahara: "Bendahara",
+  superadmin: "Super Admin"
 };
+
+// Super Admin punya hak akses penuh setara Ketua (approve, hapus, lihat Pengaturan, dll).
+// Semua pengecekan izin "khusus Ketua" di seluruh aplikasi memakai helper ini.
+function isFullAdmin() {
+  return currentRole === "ketua" || currentRole === "superadmin";
+}
 
 function getMonthKey(d) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
