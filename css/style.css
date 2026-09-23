@@ -1,4 +1,4 @@
-:root{
+  :root{
     --bg:#F3F5F8;
     --surface:#FFFFFF;
     --surface-2:#EEF2F7;
@@ -123,10 +123,13 @@
   .letter-sub{ font-size:11.5px; color:var(--text-muted); margin-top:1px; }
   .letter-nomor{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted); margin-top:2px; font-variant-numeric:tabular-nums; }
   .letter-download{
-    width:34px; height:34px; border-radius:9px; border:none; background:var(--mint-dim); color:var(--mint);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    width:40px; height:40px; border-radius:10px; border:none; background:var(--mint-dim); color:var(--mint);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:16px;
   }
-  .letter-download svg{ width:16px; height:16px; }
+  .letter-download svg{ width:17px; height:17px; }
+  .surat-preview, .notulen-preview{
+    background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border);
+  }
 
   #loginScreen{
     position:fixed; inset:0; z-index:100; background:var(--bg);
@@ -281,10 +284,10 @@
   .tx-amount.in{ color:var(--mint); }
   .tx-amount.out{ color:var(--rose); }
   .tx-del{
-    background:none; border:none; color:var(--text-muted); padding:4px; cursor:pointer;
+    width:40px; height:40px; border-radius:10px; border:none; background:var(--rose-dim); color:var(--rose); cursor:pointer;
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
-  .tx-del svg{ width:17px; height:17px; }
+  .tx-del svg{ width:18px; height:18px; }
   .empty-state{
     text-align:center; padding:34px 20px; color:var(--text-muted); font-size:13.5px;
     border:1px dashed var(--border); border-radius:14px;
@@ -300,15 +303,15 @@
   .tx-status{
     font-size:10.5px; font-weight:700; color:var(--amber); display:flex; align-items:center; gap:4px; margin-top:1px;
   }
-  .tx-actions{ display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+  .tx-actions{ display:grid; grid-template-columns:repeat(2, 40px); gap:8px; flex-shrink:0; }
   .tx-approve, .tx-reject, .tx-edit{
-    width:30px; height:30px; border-radius:9px; border:none; cursor:pointer;
+    width:40px; height:40px; border-radius:10px; border:none; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
   }
   .tx-approve{ background:var(--green-dim); color:var(--green); }
   .tx-reject{ background:var(--rose-dim); color:var(--rose); }
   .tx-edit{ background:var(--mint-dim); color:var(--mint); }
-  .tx-approve svg, .tx-reject svg, .tx-edit svg{ width:15px; height:15px; }
+  .tx-approve svg, .tx-reject svg, .tx-edit svg{ width:17px; height:17px; }
 
   .edit-banner{
     display:flex; align-items:center; justify-content:space-between;
