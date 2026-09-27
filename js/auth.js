@@ -65,6 +65,7 @@ auth.onAuthStateChanged(user => {
     const notNotulisEl = document.getElementById("notNotulis");
     if (notNotulisEl && !notNotulisEl.value) notNotulisEl.value = ROLE_NAMES[currentRole];
     tabPengaturan.style.display = isFullAdmin() ? "block" : "none";
+    activityLogCard.style.display = isFullAdmin() ? "block" : "none";
     loginScreen.style.display = "none";
     appRoot.style.display = "block";
     loginEmail.value = "";
@@ -89,6 +90,17 @@ auth.onAuthStateChanged(user => {
       notulen = snapshot.val() || {};
       renderNotulen();
     });
+    if (activityLogListenerRef) activityLogListenerRef.off();
+    if (isFullAdmin()) {
+      activityLogListenerRef = fdb.ref("activityLog").orderByChild("at").limitToLast(300);
+      activityLogListenerRef.on("value", snapshot => {
+        activityLog = snapshot.val() || {};
+        renderActivityLog();
+      });
+    } else {
+      activityLogListenerRef = null;
+      activityLog = {};
+    }
     if (roleNamesListenerRef) roleNamesListenerRef.off();
     roleNamesListenerRef = fdb.ref("settings/roleNames");
     roleNamesListenerRef.on("value", snapshot => {
@@ -120,6 +132,10 @@ auth.onAuthStateChanged(user => {
       notulenListenerRef.off();
       notulenListenerRef = null;
     }
+    if (activityLogListenerRef) {
+      activityLogListenerRef.off();
+      activityLogListenerRef = null;
+    }
     if (roleNamesListenerRef) {
       roleNamesListenerRef.off();
       roleNamesListenerRef = null;
@@ -127,6 +143,7 @@ auth.onAuthStateChanged(user => {
     db = {};
     letters = {};
     notulen = {};
+    activityLog = {};
     ROLE_NAMES = Object.assign({}, DEFAULT_ROLE_NAMES);
     loginScreen.style.display = "flex";
     appRoot.style.display = "none";
@@ -146,11 +163,19 @@ saveSettingsBtn.addEventListener("click", () => {
     return;
   }
   saveSettingsBtn.disabled = true;
+  const before = Object.assign({}, ROLE_NAMES);
   fdb.ref("settings/roleNames").set({
     ketua: nextKetua,
     sekretaris: nextSekretaris,
     bendahara: nextBendahara
-  }).then(() => showToast("Nama pengurus tersimpan")).catch(() => showToast("Gagal menyimpan, cek koneksi/izin akun")).finally(() => {
+  }).then(() => {
+    const changes = [];
+    if (before.ketua !== nextKetua) changes.push(`Ketua "${before.ketua}" \u2192 "${nextKetua}"`);
+    if (before.sekretaris !== nextSekretaris) changes.push(`Sekretaris "${before.sekretaris}" \u2192 "${nextSekretaris}"`);
+    if (before.bendahara !== nextBendahara) changes.push(`Bendahara "${before.bendahara}" \u2192 "${nextBendahara}"`);
+    logActivity("pengaturan", "edit", changes.length ? "Ubah nama pengurus: " + changes.join(", ") : "Simpan nama pengurus (tidak ada perubahan)");
+    showToast("Nama pengurus tersimpan");
+  }).catch(() => showToast("Gagal menyimpan, cek koneksi/izin akun")).finally(() => {
     saveSettingsBtn.disabled = false;
   });
 });
