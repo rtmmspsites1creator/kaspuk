@@ -70,6 +70,7 @@ notulenSubmitBtn.addEventListener("click", () => {
     fdb.ref("notulen/" + editingNotulenId).update({
       data: data
     }).then(() => {
+      logActivity("notulen", "edit", `Edit notulen "${data.judul}" (${data.tanggalRapat})`);
       cancelEditNotulen();
       showToast("Notulen diperbarui");
     }).catch(err => {
@@ -96,6 +97,7 @@ notulenSubmitBtn.addEventListener("click", () => {
       createdAt: firebase.database.ServerValue.TIMESTAMP
     });
   }).then(() => {
+    logActivity("notulen", "buat", `Buat notulen "${data.judul}" (${data.tanggalRapat})`);
     clearNotulenForm();
     showToast("Notulen tersimpan");
   }).catch(err => {
@@ -156,7 +158,10 @@ function deleteNotulen(id) {
     showToast("Tidak punya izin menghapus notulen ini");
     return;
   }
-  fdb.ref("notulen/" + id).remove().then(() => showToast("Notulen dihapus")).catch(() => showToast("Gagal menghapus, tidak punya izin"));
+  fdb.ref("notulen/" + id).remove().then(() => {
+    logActivity("notulen", "hapus", `Hapus notulen "${n.data.judul}" (${n.data.tanggalRapat})`);
+    showToast("Notulen dihapus");
+  }).catch(() => showToast("Gagal menghapus, tidak punya izin"));
 }
 
 function getNotulenList() {
