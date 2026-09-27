@@ -56,6 +56,23 @@ function sanitizeFilename(str) {
     .trim();
 }
 
+// Log Aktivitas: jejak audit siapa melakukan apa, dilihat Ketua/Super Admin di tab
+// Pengaturan untuk menelusuri ketidaksesuaian (mis. transaksi tercatat di bulan yang salah).
+// Sengaja "fire-and-forget" (tidak di-await, gagal-pun diamkan) supaya log TIDAK PERNAH
+// menghambat/menggagalkan aksi utama pengguna.
+function logActivity(module, action, description) {
+  if (!currentUid) return;
+  fdb.ref("activityLog").push({
+    module: module,
+    action: action,
+    description: description,
+    byUid: currentUid,
+    byName: ROLE_NAMES[currentRole],
+    byRole: currentRole,
+    at: firebase.database.ServerValue.TIMESTAMP
+  }).catch(() => {});
+}
+
 function getMonthKey(d) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
 }
@@ -87,9 +104,13 @@ let letters = {};
 
 let notulen = {};
 
+let activityLog = {};
+
 let lettersListenerRef = null;
 
 let notulenListenerRef = null;
+
+let activityLogListenerRef = null;
 
 let roleNamesListenerRef = null;
 
