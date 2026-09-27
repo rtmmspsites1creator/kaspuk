@@ -298,6 +298,21 @@
       </div>
       <button id="saveSettingsBtn">Simpan Perubahan</button>
     </div>
+
+    <div class="card" id="activityLogCard">
+      <div class="card-title">📋 Log Aktivitas</div>
+      <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px; line-height:1.5;">
+        Jejak siapa membuat, mengubah, menyetujui, atau menghapus data — pakai ini untuk menelusuri kalau ada catatan yang tidak sesuai.
+      </p>
+      <div class="field">
+        <input type="text" id="activityLogSearch" placeholder="Cari nama, kata kunci, atau modul...">
+      </div>
+      <div class="list-header" style="margin-top:0;">
+        <h2>Riwayat</h2>
+        <span id="activityLogCount">0 aktivitas</span>
+      </div>
+      <div id="activityLogList"></div>
+    </div>
   </div>
 
 </div>
@@ -327,6 +342,7 @@
 <script defer src="js/transactions.js"></script>
 <script defer src="js/letters.js"></script>
 <script defer src="js/notulen.js"></script>
+<script defer src="js/activitylog.js"></script>
 <script defer src="js/render.js"></script>
 <script defer src="js/app.js"></script>
 <script src="responsive-enhance.js" defer></script>
