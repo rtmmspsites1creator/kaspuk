@@ -92,6 +92,7 @@ suratSubmitBtn.addEventListener("click", () => {
       tanggalSurat: suratTanggal.value || todayISO(),
       data: data
     }).then(() => {
+      logActivity("surat", "edit", `Edit surat ${LETTER_LABELS[original.type]}: ${letterSummary(Object.assign({}, original, {data: data}))}`);
       cancelEditLetter();
       showToast("Surat diperbarui");
     }).catch(err => {
@@ -121,6 +122,7 @@ suratSubmitBtn.addEventListener("click", () => {
     createdByRole: currentRole,
     createdAt: firebase.database.ServerValue.TIMESTAMP
   }).then(() => {
+    logActivity("surat", "buat", `Buat surat ${LETTER_LABELS[selectedLetterType]}: ${letterSummary({type: selectedLetterType, data: data})}`);
     clearLetterForm();
     showToast(isKetua ? "Surat tersimpan" : "Surat terkirim · menunggu ACC Ketua");
   }).catch(err => {
@@ -214,12 +216,20 @@ function approveLetter(id) {
       approvedByName: ROLE_NAMES[currentRole],
       approvedAt: firebase.database.ServerValue.TIMESTAMP
     });
-  }).then(() => showToast("Surat disetujui & diberi nomor")).catch(() => showToast("Gagal menyetujui surat"));
+  }).then(() => {
+    const l = letters[id];
+    logActivity("surat", "approve", `Setujui surat ${LETTER_LABELS[letterType]}${l ? ": " + letterSummary(l) : ""}`);
+    showToast("Surat disetujui & diberi nomor");
+  }).catch(() => showToast("Gagal menyetujui surat"));
 }
 
 function rejectLetter(id) {
   if (!isFullAdmin()) return;
-  fdb.ref("letters/" + id).remove().then(() => showToast("Surat ditolak & dihapus")).catch(() => showToast("Gagal menolak surat"));
+  const l = letters[id];
+  fdb.ref("letters/" + id).remove().then(() => {
+    logActivity("surat", "tolak", `Tolak surat${l ? " " + LETTER_LABELS[l.type] + ": " + letterSummary(l) : " " + id}`);
+    showToast("Surat ditolak & dihapus");
+  }).catch(() => showToast("Gagal menolak surat"));
 }
 
 function deleteLetter(id) {
@@ -227,7 +237,11 @@ function deleteLetter(id) {
     showToast("Hanya Ketua/Super Admin yang bisa menghapus surat");
     return;
   }
-  fdb.ref("letters/" + id).remove().then(() => showToast("Surat dihapus")).catch(() => showToast("Gagal menghapus, tidak punya izin"));
+  const l = letters[id];
+  fdb.ref("letters/" + id).remove().then(() => {
+    logActivity("surat", "hapus", `Hapus surat${l ? " " + LETTER_LABELS[l.type] + ": " + letterSummary(l) : " " + id}`);
+    showToast("Surat dihapus");
+  }).catch(() => showToast("Gagal menghapus, tidak punya izin"));
 }
 
 const LETTER_CODES = {
