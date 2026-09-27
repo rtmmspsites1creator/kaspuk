@@ -48,6 +48,14 @@ const settingBendaharaInput = document.getElementById("settingBendaharaInput");
 
 const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 
+const activityLogCard = document.getElementById("activityLogCard");
+
+const activityLogSearch = document.getElementById("activityLogSearch");
+
+const activityLogList = document.getElementById("activityLogList");
+
+const activityLogCount = document.getElementById("activityLogCount");
+
 const suratFormCard = document.getElementById("suratFormCard");
 
 const suratTanggal = document.getElementById("suratTanggal");
