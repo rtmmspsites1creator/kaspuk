@@ -80,6 +80,7 @@ saveBtn.addEventListener("click", () => {
   saveBtn.disabled = true;
   const isKetua = isFullAdmin();
   if (editingTxId) {
+    const before = (db[editingTxMonth] || {})[editingTxId];
     const updates = {
       date: date,
       type: selectedType,
@@ -99,6 +100,14 @@ saveBtn.addEventListener("click", () => {
       });
     }
     op.then(() => {
+      const changes = [];
+      if (before) {
+        if (before.date !== date) changes.push(`tanggal ${before.date} \u2192 ${date}`);
+        if (before.desc !== desc) changes.push(`keterangan "${before.desc}" \u2192 "${desc}"`);
+        if (before.amount !== amount) changes.push(`nominal ${formatRupiah(before.amount)} \u2192 ${formatRupiah(amount)}`);
+        if (before.type !== selectedType) changes.push(`jenis ${before.type === "in" ? "Pemasukan" : "Pengeluaran"} \u2192 ${selectedType === "in" ? "Pemasukan" : "Pengeluaran"}`);
+      }
+      logActivity("transaksi", "edit", `Edit transaksi "${desc}"${changes.length ? ": " + changes.join(", ") : ""}`);
       cancelEditTx();
       currentMonth = monthKey;
       showToast("Transaksi diperbarui");
@@ -143,6 +152,7 @@ saveBtn.addEventListener("click", () => {
     return;
   }
   fdb.ref("transactions/" + monthKey).push(payload).then(() => {
+    logActivity("transaksi", "buat", `Catat transaksi ${selectedType === "in" ? "Pemasukan" : "Pengeluaran"} "${desc}" ${formatRupiah(amount)} (${monthLabel(monthKey)})`);
     resetFormAfterSave();
     currentMonth = monthKey;
     showToast(isKetua ? "Tersimpan · " + formatRupiah(amount) : "Terkirim · menunggu ACC Ketua");
@@ -192,16 +202,24 @@ txEditCancelBtn.addEventListener("click", cancelEditTx);
 
 function approveTx(id) {
   if (!isFullAdmin()) return;
+  const t = (db[currentMonth] || {})[id];
   fdb.ref("transactions/" + currentMonth + "/" + id).update({
     status: "approved",
     approvedByName: ROLE_NAMES[currentRole],
     approvedAt: firebase.database.ServerValue.TIMESTAMP
-  }).then(() => showToast("Transaksi disetujui")).catch(() => showToast("Gagal menyetujui transaksi"));
+  }).then(() => {
+    logActivity("transaksi", "approve", `Setujui transaksi "${t ? t.desc : id}"${t ? " " + formatRupiah(t.amount) : ""} (${monthLabel(currentMonth)})`);
+    showToast("Transaksi disetujui");
+  }).catch(() => showToast("Gagal menyetujui transaksi"));
 }
 
 function rejectTx(id) {
   if (!isFullAdmin()) return;
-  fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => showToast("Transaksi ditolak & dihapus")).catch(() => showToast("Gagal menolak transaksi"));
+  const t = (db[currentMonth] || {})[id];
+  fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => {
+    logActivity("transaksi", "tolak", `Tolak transaksi "${t ? t.desc : id}"${t ? " " + formatRupiah(t.amount) : ""} (${monthLabel(currentMonth)})`);
+    showToast("Transaksi ditolak & dihapus");
+  }).catch(() => showToast("Gagal menolak transaksi"));
 }
 
 function deleteTx(id) {
@@ -209,5 +227,9 @@ function deleteTx(id) {
     showToast("Hanya Ketua/Super Admin yang bisa menghapus transaksi");
     return;
   }
-  fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => showToast("Transaksi dihapus")).catch(() => showToast("Gagal menghapus, tidak punya izin"));
+  const t = (db[currentMonth] || {})[id];
+  fdb.ref("transactions/" + currentMonth + "/" + id).remove().then(() => {
+    logActivity("transaksi", "hapus", `Hapus transaksi "${t ? t.desc : id}"${t ? " " + formatRupiah(t.amount) : ""} (${monthLabel(currentMonth)})`);
+    showToast("Transaksi dihapus");
+  }).catch(() => showToast("Gagal menghapus, tidak punya izin"));
 }
