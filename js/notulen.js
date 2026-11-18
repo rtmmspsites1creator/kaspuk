@@ -221,7 +221,7 @@ function buildNotulenPDF(n) {
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginX = 20;
   const maxW = pageWidth - marginX * 2;
-  let y = drawLetterhead(doc, pageWidth);
+  let y = drawLetterhead(doc, pageWidth, true);
 
   function para(text, fontSize, lineHeight, bold) {
     doc.setFont("helvetica", bold ? "bold" : "normal");
@@ -260,9 +260,6 @@ function buildNotulenPDF(n) {
     lines.forEach((line, i) => doc.text(line, marginX + 38, y + i * (lineHeight || 5.2)));
     y += Math.max(1, lines.length) * (lineHeight || 5.2);
   }
-  // Merapikan isi kolom bebas seperti "Hasil Pembahasan / Keputusan": baris kosong jadi jeda
-  // paragraf, dan baris berawalan angka/bullet ("1.", "2)", "-", "•") dirender dengan indentasi
-  // menggantung supaya sambungan teks yang panjang tetap rapi sejajar, bukan menempel ke nomor.
   function richText(text, fontSize, lineHeight) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(fontSize);
