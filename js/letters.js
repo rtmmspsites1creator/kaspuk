@@ -250,11 +250,17 @@ const LETTER_CODES = {
   keterangan: "SKET"
 };
 
-function drawLetterhead(doc, pageWidth) {
+function drawLetterhead(doc, pageWidth, withCompanyLogo) {
   const logoSize = 18;
   if (LOGO_DATA_URI) {
     try {
       doc.addImage(LOGO_DATA_URI, "JPEG", 14, 8, logoSize, logoSize);
+    } catch (e) {}
+  }
+  if (withCompanyLogo && COMPANY_LOGO_DATA_URI) {
+    try {
+      const companyLogoWidth = logoSize * COMPANY_LOGO_RATIO;
+      doc.addImage(COMPANY_LOGO_DATA_URI, "PNG", pageWidth - 14 - companyLogoWidth, 8, companyLogoWidth, logoSize);
     } catch (e) {}
   }
   let y = 13;
