@@ -266,6 +266,12 @@
         <label for="notCatatan">Catatan Tambahan (opsional)</label>
         <textarea id="notCatatan" rows="2"></textarea>
       </div>
+      <div class="field">
+        <label>Foto Dokumentasi Rapat (opsional, maks. 4)</label>
+        <input type="file" id="notFotoInput" accept="image/*" multiple hidden>
+        <button type="button" id="notFotoAddBtn" class="foto-add-btn">📷 Tambah Foto</button>
+        <div class="foto-grid" id="notFotoGrid"></div>
+      </div>
 
       <button id="notulenSubmitBtn">Simpan Notulen</button>
     </div>
