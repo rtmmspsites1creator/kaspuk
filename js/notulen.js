@@ -4,6 +4,97 @@ const NOTULEN_CODE = "NOT";
 
 document.getElementById("notTanggal").value = todayISO();
 
+const NOTULEN_MAX_FOTO = 4;
+const NOTULEN_FOTO_MAX_SIDE = 1100;
+const NOTULEN_FOTO_QUALITY = 0.7;
+
+const notFotoInput = document.getElementById("notFotoInput");
+const notFotoAddBtn = document.getElementById("notFotoAddBtn");
+const notFotoGrid = document.getElementById("notFotoGrid");
+
+let notulenFotoDraft = [];
+let notulenFotoReady = true;
+let notulenFotoOriginalCount = 0;
+
+function renderNotulenFoto() {
+  notFotoGrid.innerHTML = notulenFotoDraft.map((src, i) => `
+    <div class="foto-item">
+      <img src="${src}" alt="Foto dokumentasi ${i + 1}">
+      <button type="button" data-index="${i}" aria-label="Hapus foto ${i + 1}">×</button>
+    </div>
+  `).join("");
+  notFotoGrid.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      notulenFotoDraft.splice(Number(btn.dataset.index), 1);
+      renderNotulenFoto();
+    });
+  });
+  const full = notulenFotoDraft.length >= NOTULEN_MAX_FOTO;
+  notFotoAddBtn.disabled = !notulenFotoReady || full;
+  notFotoAddBtn.textContent = full ? "Batas foto tercapai" : "📷 Tambah Foto";
+}
+
+function compressNotulenFoto(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, NOTULEN_FOTO_MAX_SIDE / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", NOTULEN_FOTO_QUALITY));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("foto tidak terbaca"));
+    };
+    img.src = url;
+  });
+}
+
+notFotoAddBtn.addEventListener("click", () => notFotoInput.click());
+
+notFotoInput.addEventListener("change", async () => {
+  const files = Array.from(notFotoInput.files || []);
+  notFotoInput.value = "";
+  if (!files.length) return;
+  const slots = NOTULEN_MAX_FOTO - notulenFotoDraft.length;
+  if (files.length > slots) showToast("Maksimal " + NOTULEN_MAX_FOTO + " foto per notulen");
+  notFotoAddBtn.disabled = true;
+  for (const file of files.slice(0, slots)) {
+    try {
+      notulenFotoDraft.push(await compressNotulenFoto(file));
+    } catch (e) {
+      showToast("Foto tidak bisa dibaca");
+    }
+  }
+  renderNotulenFoto();
+});
+
+function fetchNotulenFoto(id) {
+  return fdb.ref("notulenFoto/" + id).once("value").then(snap => {
+    const val = snap.val();
+    const list = Array.isArray(val) ? val : (val ? Object.values(val) : []);
+    return list.filter(Boolean).slice(0, NOTULEN_MAX_FOTO);
+  });
+}
+
+function persistNotulenFoto(id) {
+  if (!notulenFotoReady) return Promise.resolve(true);
+  if (!notulenFotoDraft.length && !notulenFotoOriginalCount) return Promise.resolve(true);
+  const ref = fdb.ref("notulenFoto/" + id);
+  const task = notulenFotoDraft.length ? ref.set(notulenFotoDraft) : ref.remove();
+  return task.then(() => true).catch(() => false);
+}
+
+renderNotulenFoto();
+
 function collectNotulenData() {
   const judul = document.getElementById("notJudul").value.trim();
   const tanggal = document.getElementById("notTanggal").value;
@@ -47,6 +138,10 @@ function clearNotulenForm() {
   document.getElementById("notTanggal").value = todayISO();
   const notNotulisEl = document.getElementById("notNotulis");
   if (notNotulisEl) notNotulisEl.value = ROLE_NAMES[currentRole] || "";
+  notulenFotoDraft = [];
+  notulenFotoReady = true;
+  notulenFotoOriginalCount = 0;
+  renderNotulenFoto();
 }
 
 const notulenSubmitBtn = document.getElementById("notulenSubmitBtn");
@@ -67,12 +162,13 @@ notulenSubmitBtn.addEventListener("click", () => {
       return;
     }
     notulenSubmitBtn.disabled = true;
-    fdb.ref("notulen/" + editingNotulenId).update({
+    const editId = editingNotulenId;
+    fdb.ref("notulen/" + editId).update({
       data: data
-    }).then(() => {
+    }).then(() => persistNotulenFoto(editId)).then(fotoOk => {
       logActivity("notulen", "edit", `Edit notulen "${data.judul}" (${data.tanggalRapat})`);
       cancelEditNotulen();
-      showToast("Notulen diperbarui");
+      showToast(fotoOk ? "Notulen diperbarui" : "Notulen diperbarui, tetapi foto gagal disimpan (cek Rules Firebase)");
     }).catch(err => {
       const code = err && err.code ? err.code : "";
       showToast(code === "PERMISSION_DENIED" ? "Ditolak sistem: Rules Firebase belum diperbarui" : "Gagal memperbarui notulen");
@@ -88,18 +184,21 @@ notulenSubmitBtn.addEventListener("click", () => {
     const urut = result.snapshot.val();
     const bulanRoman = ROMAN_MONTHS[new Date().getMonth()];
     const nomor = urut + "/" + NOTULEN_CODE + "/PUK SP RTMM-SPSI/TES 1/" + bulanRoman + "/" + year;
-    return fdb.ref("notulen").push({
+    const newRef = fdb.ref("notulen").push();
+    return newRef.set({
       nomorNotulen: nomor,
       data: data,
       createdByUid: currentUid,
       createdByName: ROLE_NAMES[currentRole],
       createdByRole: currentRole,
       createdAt: firebase.database.ServerValue.TIMESTAMP
-    });
-  }).then(() => {
+    }).then(() => newRef.key);
+  }).then(newId => {
     logActivity("notulen", "buat", `Buat notulen "${data.judul}" (${data.tanggalRapat})`);
+    return persistNotulenFoto(newId);
+  }).then(fotoOk => {
     clearNotulenForm();
-    showToast("Notulen tersimpan");
+    showToast(fotoOk ? "Notulen tersimpan" : "Notulen tersimpan, tetapi foto gagal disimpan (cek Rules Firebase)");
   }).catch(err => {
     const code = err && err.code ? err.code : "";
     if (code === "PERMISSION_DENIED") {
@@ -137,6 +236,20 @@ function startEditNotulen(id) {
   editingNotulenId = id;
   notulenEditBanner.style.display = "flex";
   notulenSubmitBtn.textContent = "Update Notulen";
+  notulenFotoDraft = [];
+  notulenFotoReady = false;
+  notulenFotoOriginalCount = 0;
+  renderNotulenFoto();
+  fetchNotulenFoto(id).then(list => {
+    if (editingNotulenId !== id) return;
+    notulenFotoDraft = list;
+    notulenFotoOriginalCount = list.length;
+    notulenFotoReady = true;
+    renderNotulenFoto();
+  }).catch(() => {
+    if (editingNotulenId !== id) return;
+    showToast("Foto dokumentasi gagal dimuat");
+  });
   document.getElementById("notulenFormCard").scrollIntoView({
     behavior: "smooth",
     block: "start"
@@ -159,6 +272,7 @@ function deleteNotulen(id) {
     return;
   }
   fdb.ref("notulen/" + id).remove().then(() => {
+    fdb.ref("notulenFoto/" + id).remove().catch(() => {});
     logActivity("notulen", "hapus", `Hapus notulen "${n.data.judul}" (${n.data.tanggalRapat})`);
     showToast("Notulen dihapus");
   }).catch(() => showToast("Gagal menghapus, tidak punya izin"));
@@ -214,7 +328,57 @@ function renderNotulen() {
   });
 }
 
-function buildNotulenPDF(n) {
+function drawNotulenDokumentasi(doc, pageWidth, marginX, n, fotos) {
+  const maxW = pageWidth - marginX * 2;
+  const title = "DOKUMENTASI RAPAT";
+  let y = 22;
+  doc.addPage();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(title, pageWidth / 2, y, { align: "center" });
+  const titleW = doc.getTextWidth(title);
+  doc.setLineWidth(0.3);
+  doc.line(pageWidth / 2 - titleW / 2, y + 1.2, pageWidth / 2 + titleW / 2, y + 1.2);
+  y += 8;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const info = [
+    n.nomorNotulen ? "Lampiran Notulen Nomor: " + n.nomorNotulen : "",
+    n.data.judul,
+    fmtTgl(n.data.tanggalRapat) + (n.data.tempat ? " - " + n.data.tempat : "")
+  ].filter(Boolean);
+  info.forEach(line => {
+    doc.splitTextToSize(line, maxW).forEach(part => {
+      doc.text(part, pageWidth / 2, y, { align: "center" });
+      y += 5;
+    });
+  });
+  y += 5;
+
+  const gap = 6;
+  const colW = (maxW - gap) / 2;
+  const boxH = colW * 0.75;
+  fotos.slice(0, NOTULEN_MAX_FOTO).forEach((src, i) => {
+    const x = marginX + (i % 2) * (colW + gap);
+    const top = y + Math.floor(i / 2) * (boxH + 12);
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.2);
+    doc.rect(x, top, colW, boxH);
+    try {
+      const props = doc.getImageProperties(src);
+      const scale = Math.min(colW / props.width, boxH / props.height);
+      const w = props.width * scale;
+      const h = props.height * scale;
+      doc.addImage(src, "JPEG", x + (colW - w) / 2, top + (boxH - h) / 2, w, h);
+    } catch (e) {}
+    doc.setFontSize(9);
+    doc.text("Foto " + (i + 1), x + colW / 2, top + boxH + 5, { align: "center" });
+  });
+  doc.setDrawColor(0);
+}
+
+function buildNotulenPDF(n, fotos) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -334,7 +498,13 @@ function buildNotulenPDF(n) {
     { role: "Pemimpin Rapat", name: n.data.pemimpinRapat }
   ]);
 
+  if (fotos && fotos.length) drawNotulenDokumentasi(doc, pageWidth, marginX, n, fotos);
+
   return doc;
+}
+
+function loadNotulenFotoForPDF(id) {
+  return fetchNotulenFoto(id).then(list => ({ fotos: list, ok: true })).catch(() => ({ fotos: [], ok: false }));
 }
 
 function previewNotulenPDF(id) {
@@ -343,8 +513,13 @@ function previewNotulenPDF(id) {
     showToast("Notulen tidak ditemukan");
     return;
   }
-  const doc = buildNotulenPDF(n);
-  window.open(doc.output("bloburl"), "_blank");
+  const win = window.open("", "_blank");
+  loadNotulenFotoForPDF(id).then(res => {
+    if (!res.ok) showToast("Foto dokumentasi gagal dimuat, PDF dibuat tanpa foto");
+    const url = buildNotulenPDF(n, res.fotos).output("bloburl");
+    if (win) win.location.href = url;
+    else window.open(url, "_blank");
+  });
 }
 
 function downloadNotulenPDF(id) {
@@ -353,8 +528,11 @@ function downloadNotulenPDF(id) {
     showToast("Notulen tidak ditemukan");
     return;
   }
-  const doc = buildNotulenPDF(n);
-  const fileLabel = n.nomorNotulen ? sanitizeFilename(n.nomorNotulen) : n.data.tanggalRapat;
-  doc.save(`Notulen-${fileLabel}.pdf`);
-  showToast("Notulen PDF sedang diunduh");
+  loadNotulenFotoForPDF(id).then(res => {
+    if (!res.ok) showToast("Foto dokumentasi gagal dimuat, PDF dibuat tanpa foto");
+    const doc = buildNotulenPDF(n, res.fotos);
+    const fileLabel = n.nomorNotulen ? sanitizeFilename(n.nomorNotulen) : n.data.tanggalRapat;
+    doc.save(`Notulen-${fileLabel}.pdf`);
+    showToast("Notulen PDF sedang diunduh");
+  });
 }
