@@ -378,6 +378,21 @@ function drawNotulenDokumentasi(doc, pageWidth, marginX, n, fotos) {
   doc.setDrawColor(0);
 }
 
+function drawNotulenPageNumbers(doc, pageWidth, marginX, n) {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const total = doc.getNumberOfPages();
+  const footerY = pageHeight - 6;
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    if (n.nomorNotulen) doc.text("No. " + n.nomorNotulen, marginX, footerY);
+    doc.text("Halaman " + i + " dari " + total, pageWidth - marginX, footerY, { align: "right" });
+  }
+  doc.setTextColor(0);
+}
+
 function buildNotulenPDF(n, fotos) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -499,6 +514,8 @@ function buildNotulenPDF(n, fotos) {
   ]);
 
   if (fotos && fotos.length) drawNotulenDokumentasi(doc, pageWidth, marginX, n, fotos);
+
+  drawNotulenPageNumbers(doc, pageWidth, marginX, n);
 
   return doc;
 }
